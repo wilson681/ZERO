@@ -23,6 +23,7 @@ let state = null;
 let lastPackId = null;
 
 // ---------- 工具 ----------
+// [build:api-start] 静态试玩版构建时，这段会被本地引擎替换（见 build-static.js）
 async function api(path, opts) {
   const res = await fetch(path, opts && {
     method: 'POST',
@@ -33,6 +34,7 @@ async function api(path, opts) {
   if (!res.ok) throw new Error(data.error || '请求失败');
   return data;
 }
+// [build:api-end]
 
 function fmt(n) { return n.toLocaleString('zh-CN'); }
 
