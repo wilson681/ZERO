@@ -9,7 +9,13 @@ const TIER_COLOR = {
   common: 'var(--tier-common)', uncommon: 'var(--tier-uncommon)', rare: 'var(--tier-rare)',
   epic: 'var(--tier-epic)', legendary: 'var(--tier-legendary)', grail: 'var(--tier-grail)'
 };
-const THEME_COLOR = { amber: '#f5c542', violet: '#a78bfa', cyan: '#22d3ee' };
+const THEME_COLOR = { red: '#f04a4a', blue: '#5b8def', gold: '#f5c542', purple: '#8b5cf6' };
+const TIER_GRAD = {
+  red: ['#e14848', '#8f1f1f'],
+  blue: ['#5b8def', '#2c4f9e'],
+  gold: ['#d9a514', '#8a6403'],
+  purple: ['#8b5cf6', '#5b32b5']
+};
 const EMOJI = ['🔥', '💧', '⚡', '🌿', '🌙', '⭐', '🐉', '👻', '❄️', '🌊'];
 
 let packs = [];
@@ -113,12 +119,14 @@ function foilPackEl(pack, { mini = false, interactive = false } = {}) {
   const el = document.createElement('div');
   el.className = 'foilpack' + (mini ? ' mini' : '');
   el.style.setProperty('--pc', THEME_COLOR[pack.theme] || '#f5c542');
+  const band = pack.nameEn.split(' ')[0];
   el.innerHTML = `
     <div class="fp-cardout"><div class="fp-cardback">Z</div></div>
     <div class="fp-body">
+      <div class="fp-band">${band}</div>
       <div class="fp-logo">ZERO</div>
       <div class="fp-series">${pack.name}</div>
-      <div class="fp-sub">${pack.nameEn.toUpperCase()} · TCG MYSTERY PACK</div>
+      <div class="fp-sub">${pack.nameEn} · TCG MYSTERY</div>
       <div class="fp-badge">◉ ${fmt(pack.price)} / 抽</div>
       <div class="fp-sheen"></div>
       <div class="fp-crimp fp-crimp-bottom"></div>
@@ -126,6 +134,7 @@ function foilPackEl(pack, { mini = false, interactive = false } = {}) {
     <div class="fp-strip">
       <div class="fp-crimp"></div>
       <div class="fp-foil"></div>
+      <div class="fp-band"></div>
     </div>
     ${interactive ? `
     <div class="fp-guide"></div>
@@ -140,13 +149,13 @@ function setupCutter(packEl, onDone) {
   const blade = packEl.querySelector('.fp-blade');
   const slit = packEl.querySelector('.fp-slit');
   const zone = packEl.querySelector('.fp-cutzone');
-  const INSET = 10;
+  const INSET_L = 34, INSET_R = 10; // 切割线避开左侧品牌带
   let progress = 0, dragging = false, done = false;
 
   function apply() {
-    const w = packEl.clientWidth - INSET * 2;
+    const w = packEl.clientWidth - INSET_L - INSET_R;
     slit.style.width = `${progress * w}px`;
-    blade.style.left = `${INSET + progress * w}px`;
+    blade.style.left = `${INSET_L + progress * w}px`;
   }
   function finish() {
     done = true;
@@ -173,7 +182,7 @@ function setupCutter(packEl, onDone) {
   zone.addEventListener('pointermove', (e) => {
     if (!dragging || done) return;
     const r = packEl.getBoundingClientRect();
-    advance((e.clientX - r.left - INSET) / (r.width - INSET * 2));
+    advance((e.clientX - r.left - INSET_L) / (r.width - INSET_L - INSET_R));
   });
   const stop = () => { dragging = false; blade.classList.remove('active'); };
   zone.addEventListener('pointerup', stop);
@@ -199,34 +208,73 @@ function setupCutter(packEl, onDone) {
   };
 }
 
-// ---------- 卡包商店 ----------
-function renderPacks() {
-  const grid = $('#packGrid');
-  grid.innerHTML = '';
-  for (const pack of packs) {
-    const color = THEME_COLOR[pack.theme] || '#f5c542';
-    const jackpot = pack.pool.reduce((a, b) => (b.value > a.value ? b : a));
-    const el = document.createElement('div');
-    el.className = 'pack-card';
-    el.style.setProperty('--pack-color', color);
-    el.innerHTML = `
-      <div class="pack-art"></div>
-      <div class="pack-title"><h2>${pack.name}</h2><span class="en">${pack.nameEn}</span></div>
-      <div class="pack-desc">${pack.desc}</div>
-      <div class="pack-jackpot">🏆 头奖：${jackpot.name} ${jackpot.grade || ''} · ◉ ${fmt(jackpot.value)}（${oddsText(jackpot.odds)}）</div>
-      <button class="odds-link">查看完整概率公示 · RTP ${pack.rtp}%</button>
-      <div class="pack-footer">
-        <div class="pack-price">◉ ${fmt(pack.price)}<small> /次</small></div>
-        <button class="btn btn-dim open10">开 10 次</button>
-        <button class="btn btn-gold open1">开 1 次</button>
-      </div>`;
-    el.querySelector('.pack-art').appendChild(foilPackEl(pack, { mini: true }));
-    el.querySelector('.odds-link').onclick = () => showOdds(pack);
-    el.querySelector('.open1').onclick = () => openPack(pack, 1);
-    el.querySelector('.open10').onclick = () => openPack(pack, 10);
-    grid.appendChild(el);
-  }
+// ---------- 卡包商店：梯度卡片 + 舞台 + 购买栏 ----------
+let selectedPackId = null;
+let qty = 1;
+
+function currentPack() {
+  return packs.find(p => p.id === selectedPackId) || packs[0];
 }
+
+function selectPack(id) {
+  selectedPackId = id;
+  renderShop();
+}
+
+function renderShop() {
+  if (!packs.length) return;
+  if (!selectedPackId) selectedPackId = packs[0].id;
+  const cur = currentPack();
+
+  // 梯度价位卡片行
+  const tierRow = $('#tierRow');
+  tierRow.innerHTML = '';
+  for (const pack of packs) {
+    const jackpot = pack.pool.reduce((a, b) => (b.value > a.value ? b : a));
+    const [c1, c2] = TIER_GRAD[pack.theme] || TIER_GRAD.gold;
+    const el = document.createElement('button');
+    el.className = 'tier-card' + (pack.id === selectedPackId ? ' sel' : '');
+    el.style.setProperty('--tc1', c1);
+    el.style.setProperty('--tc2', c2);
+    el.innerHTML = `
+      <div class="tier-name">${pack.name}<small>${pack.nameEn}</small></div>
+      <div class="tier-price">◉ ${fmt(pack.price)} / 包</div>
+      <div class="tier-chase">TOP CHASE<b>◉ ${fmt(jackpot.value)}</b></div>
+      <div class="tier-pack"></div>`;
+    el.querySelector('.tier-pack').appendChild(foilPackEl(pack, { mini: true }));
+    el.onclick = () => selectPack(pack.id);
+    tierRow.appendChild(el);
+  }
+
+  // 中央舞台：选中的亮，其余变灰
+  const stage = $('#stage');
+  stage.innerHTML = '';
+  for (const pack of packs) {
+    const el = foilPackEl(pack);
+    if (pack.id !== selectedPackId) el.classList.add('dimmed');
+    el.onclick = () => (pack.id === selectedPackId ? openPack(pack, qty) : selectPack(pack.id));
+    stage.appendChild(el);
+  }
+
+  // 购买栏 & 保障条
+  updateBuyBar();
+  const minVal = Math.min(...cur.pool.map(c => c.value));
+  $('#guaranteeStrip').innerHTML = `
+    <div class="g-item"><small>包内保障</small><b>${cur.guarantee || '—'}</b></div>
+    <div class="g-item"><small>最低保底价值</small><b>◉ ${fmt(minVal)}</b></div>
+    <div class="g-item"><small>即时回收</small><b>${Math.round((state?.buybackRate ?? 0.9) * 100)}%</b></div>`;
+}
+
+function updateBuyBar() {
+  const cur = currentPack();
+  $('#qtyNum').textContent = qty;
+  $('#buyBtn').textContent = `立即开包 · ◉ ${fmt(cur.price * qty)}${qty > 1 ? ` (x${qty})` : ''}`;
+}
+
+$('#qtyMinus').onclick = () => { qty = Math.max(1, qty - 1); updateBuyBar(); };
+$('#qtyPlus').onclick = () => { qty = Math.min(10, qty + 1); updateBuyBar(); };
+$('#buyBtn').onclick = () => openPack(currentPack(), qty);
+$('#oddsLink').onclick = () => showOdds(currentPack());
 
 function showOdds(pack) {
   $('#oddsTitle').textContent = `${pack.name} · 概率公示`;
@@ -272,8 +320,8 @@ async function openPack(pack, count) {
   stage.hidden = false;
   stage.classList.remove('done');
   holder.innerHTML = '';
-  $('#cutHint').textContent = count === 10
-    ? '🔪 按住刀片，从左向右划开卡包 · 十连'
+  $('#cutHint').textContent = count > 1
+    ? `🔪 按住刀片，从左向右划开卡包 · x${count} 连抽`
     : '🔪 按住刀片，从左向右划开卡包';
   $('#cancelCutBtn').hidden = false;
 
@@ -488,11 +536,42 @@ $('#verifyBtn').onclick = async () => {
   }
 };
 
-// ---------- 顶栏 & 标签页 ----------
+// ---------- 顶栏 & 标签页 & 主题 ----------
 $('#topupBtn').onclick = async () => {
   const r = await api('/api/topup', {});
   setBalance(r.balance);
   toast(`充值成功 +◉ ${fmt(r.added)}（演示币，不花真钱）`);
+};
+
+$('#loginBtn').onclick = () => toast('演示环境，无需登录 🙂');
+
+// 主题切换
+function applyThemeButtons() {
+  const cur = document.documentElement.dataset.theme || 'dark';
+  document.querySelectorAll('[data-theme-set]').forEach(b => {
+    b.classList.toggle('on', b.dataset.themeSet === cur);
+  });
+}
+document.querySelectorAll('[data-theme-set]').forEach(b => {
+  b.onclick = () => {
+    document.documentElement.dataset.theme = b.dataset.themeSet;
+    try { localStorage.setItem('zero-theme', b.dataset.themeSet); } catch (e) { /* 忽略 */ }
+    applyThemeButtons();
+  };
+});
+applyThemeButtons();
+
+// 免费礼包（一次性）
+const freePackBtn = $('#freePack');
+try {
+  if (!localStorage.getItem('zero-freepack')) freePackBtn.hidden = false;
+} catch (e) { freePackBtn.hidden = false; }
+freePackBtn.onclick = async () => {
+  const r = await api('/api/topup', { amount: 200 });
+  setBalance(r.balance);
+  try { localStorage.setItem('zero-freepack', '1'); } catch (e) { /* 忽略 */ }
+  freePackBtn.hidden = true;
+  toast('🎁 新人免费礼包 +◉ 200，够开一个新手包！');
 };
 
 document.querySelectorAll('.tab').forEach(btn => {
@@ -521,7 +600,7 @@ async function refreshStateSoft() {
 async function init() {
   [packs, state] = await Promise.all([api('/api/packs'), api('/api/state')]);
   $('#balanceNum').textContent = fmt(state.balance);
-  renderPacks();
+  renderShop();
   renderInventory();
   renderHistory();
   renderTicker();

@@ -145,6 +145,7 @@ function packPublicView(pack) {
     price: pack.price,
     theme: pack.theme,
     desc: pack.desc,
+    guarantee: pack.guarantee || null,
     ev: Math.round(ev * 10) / 10,
     rtp: Math.round((ev / pack.price) * 1000) / 10, // 百分比
     pool: pack.pool.map((c) => ({
@@ -244,7 +245,7 @@ async function handleApi(req, res, url) {
     const body = await readBody(req);
     const pack = PACKS.find((p) => p.id === body.packId);
     if (!pack) return sendJson(res, 400, { error: '卡包不存在' });
-    const count = body.count === 10 ? 10 : 1;
+    const count = Math.min(10, Math.max(1, parseInt(body.count, 10) || 1));
     const cost = pack.price * count;
     if (state.balance < cost) {
       return sendJson(res, 400, { error: `余额不足：需要 ${cost} 币，当前 ${state.balance} 币` });
@@ -319,10 +320,12 @@ async function handleApi(req, res, url) {
   }
 
   if (route === 'POST /api/topup') {
-    state.balance += TOPUP_AMOUNT;
+    const body = await readBody(req);
+    const amount = Math.min(5000, Math.max(1, parseInt(body.amount, 10) || TOPUP_AMOUNT));
+    state.balance += amount;
     state.stats.topups += 1;
     saveState();
-    return sendJson(res, 200, { balance: state.balance, added: TOPUP_AMOUNT });
+    return sendJson(res, 200, { balance: state.balance, added: amount });
   }
 
   if (route === 'POST /api/client-seed') {
