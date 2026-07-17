@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ZERO RIPS · 线上评级卡抽卡</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header class="topbar">
+    <div class="logo">ZERO<span>RIPS</span></div>
+    <div class="topbar-right">
+      <div class="balance-chip" id="balanceChip">
+        <span class="coin">◉</span><b id="balanceNum">--</b> 币
+      </div>
+      <button class="btn btn-gold" id="topupBtn">模拟充值 +2000</button>
+    </div>
+  </header>
+
+  <div class="ticker" id="ticker" hidden>
+    <div class="ticker-inner" id="tickerInner"></div>
+  </div>
+
+  <nav class="tabs">
+    <button class="tab active" data-tab="shop">卡包商店</button>
+    <button class="tab" data-tab="inventory">我的卡库 <span class="badge" id="invCount">0</span></button>
+    <button class="tab" data-tab="history">开奖记录</button>
+    <button class="tab" data-tab="fairness">公平性验证</button>
+  </nav>
+
+  <main>
+    <section id="tab-shop" class="tab-panel active">
+      <div class="pack-grid" id="packGrid"></div>
+    </section>
+
+    <section id="tab-inventory" class="tab-panel">
+      <div class="inv-toolbar">
+        <div class="inv-summary" id="invSummary"></div>
+        <button class="btn btn-dim" id="sellFloorBtn">一键回收低档卡</button>
+      </div>
+      <div class="card-grid" id="invGrid"></div>
+      <p class="empty-hint" id="invEmpty">卡库空空如也，去开一包吧。</p>
+    </section>
+
+    <section id="tab-history" class="tab-panel">
+      <table class="history-table">
+        <thead>
+          <tr><th>时间</th><th>卡包</th><th>抽中</th><th>评级</th><th>价值</th><th>凭证 (nonce / roll)</th></tr>
+        </thead>
+        <tbody id="historyBody"></tbody>
+      </table>
+      <p class="empty-hint" id="histEmpty">暂无记录。</p>
+    </section>
+
+    <section id="tab-fairness" class="tab-panel">
+      <div class="fair-card">
+        <h2>可验证公平 Provably Fair</h2>
+        <p class="fair-desc">
+          每一抽的结果由三个数决定：<code>roll = HMAC_SHA256(serverSeed, clientSeed:nonce)</code> 的前
+          8 位十六进制除以 2<sup>32</sup>。平台在你开包<b>之前</b>就公示了 serverSeed 的
+          SHA-256 哈希，所以平台无法在你下注后偷偷换种子；轮换种子后旧种子明文公开，你可以逐条复验历史结果。
+        </p>
+        <div class="fair-rows">
+          <div class="fair-row"><label>服务端种子哈希（当前）</label><code id="fairHash">--</code></div>
+          <div class="fair-row">
+            <label>客户端种子（可自定义）</label>
+            <div class="fair-inline">
+              <input id="clientSeedInput" maxlength="64" spellcheck="false">
+              <button class="btn btn-dim" id="setSeedBtn">更新</button>
+            </div>
+          </div>
+          <div class="fair-row"><label>下一个 nonce</label><code id="fairNonce">--</code></div>
+        </div>
+        <button class="btn btn-gold" id="rotateBtn">轮换并公开旧种子</button>
+
+        <h3>已公开的历史种子</h3>
+        <div id="revealedList" class="revealed-list"></div>
+
+        <h3>手动复验</h3>
+        <div class="verify-form">
+          <input id="vSeed" placeholder="serverSeed（轮换后公开的明文）" spellcheck="false">
+          <input id="vClient" placeholder="clientSeed" spellcheck="false">
+          <input id="vNonce" placeholder="nonce" type="number" min="0">
+          <button class="btn btn-dim" id="verifyBtn">计算 roll</button>
+        </div>
+        <pre id="verifyOut" class="verify-out" hidden></pre>
+      </div>
+    </section>
+  </main>
+
+  <!-- 开包动画层 -->
+  <div class="overlay" id="revealOverlay" hidden>
+    <div class="overlay-bg" id="overlayBg"></div>
+    <div class="overlay-content">
+      <div class="pack-anim" id="packAnim"><div class="pack-visual" id="packVisual"></div></div>
+      <div class="reveal-area" id="revealArea" hidden></div>
+      <div class="reveal-actions" id="revealActions" hidden>
+        <div class="reveal-total" id="revealTotal"></div>
+        <button class="btn btn-gold" id="againBtn">再来一发</button>
+        <button class="btn btn-dim" id="closeRevealBtn">收下</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 概率公示弹窗 -->
+  <div class="overlay" id="oddsOverlay" hidden>
+    <div class="overlay-bg" data-close-odds></div>
+    <div class="modal">
+      <h2 id="oddsTitle"></h2>
+      <p class="odds-meta" id="oddsMeta"></p>
+      <table class="odds-table">
+        <thead><tr><th>奖品</th><th>评级</th><th>价值</th><th>概率</th></tr></thead>
+        <tbody id="oddsBody"></tbody>
+      </table>
+      <button class="btn btn-dim" data-close-odds>关闭</button>
+    </div>
+  </div>
+
+  <div class="toast" id="toast" hidden></div>
+
+  <script src="app.js"></script>
+</body>
+</html>
