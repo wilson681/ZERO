@@ -1,0 +1,1640 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ZERO · 线上评级卡开包（试玩版）</title>
+<script>try{var t=localStorage.getItem('zero-theme');document.documentElement.dataset.theme=(t==='light'||t==='dark')?t:'dark'}catch(e){document.documentElement.dataset.theme='dark'}</script>
+<style>
+/* ZERO RIPS — 深色主题 */
+* { box-sizing: border-box; margin: 0; padding: 0; }
+[hidden] { display: none !important; }
+
+:root {
+  --bg: #0b0e14;
+  --bg2: #121722;
+  --bg3: #1a2130;
+  --line: #263047;
+  --text: #e8ecf4;
+  --dim: #8b97ad;
+  --gold: #f5c542;
+  --buy-bg: linear-gradient(135deg, #f5c542, #e8940a);
+  --buy-fg: #201500;
+  --tier-common: #7d8aa0;
+  --tier-uncommon: #4ade80;
+  --tier-rare: #38bdf8;
+  --tier-epic: #a78bfa;
+  --tier-legendary: #f5c542;
+  --tier-grail: #fb7185;
+}
+
+:root[data-theme="light"] {
+  --bg: #f4f5f8;
+  --bg2: #ffffff;
+  --bg3: #eceef3;
+  --line: #dfe3ec;
+  --text: #171a21;
+  --dim: #5f6b80;
+  --gold: #b57b04;
+  --buy-bg: #16181d;
+  --buy-fg: #ffffff;
+  --tier-common: #66738a;
+  --tier-uncommon: #16a34a;
+  --tier-rare: #0284c7;
+  --tier-epic: #7c3aed;
+  --tier-legendary: #b57b04;
+  --tier-grail: #e11d48;
+}
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", -apple-system, sans-serif;
+  min-height: 100vh;
+}
+
+/* ---------- 页面骨架：侧边栏 + 主栏 ---------- */
+.shell { display: flex; min-height: 100vh; }
+.sidebar {
+  width: 224px; flex-shrink: 0; display: flex; flex-direction: column;
+  border-right: 1px solid var(--line); background: var(--bg2);
+  padding: 18px 14px; gap: 8px;
+  position: sticky; top: 0; height: 100vh;
+}
+.side-logo { font-size: 24px; font-weight: 900; letter-spacing: 2px; padding: 4px 8px 2px; }
+.side-logo span { color: var(--gold); margin-left: 4px; }
+.side-psa { font-size: 12px; color: var(--dim); padding: 0 8px 10px; }
+.side-nav { display: flex; flex-direction: column; gap: 6px; }
+.side-item {
+  display: flex; align-items: center; gap: 8px;
+  background: none; border: none; text-align: left; cursor: pointer;
+  color: var(--text); font-size: 14.5px; font-weight: 700; font-family: inherit;
+  padding: 11px 12px; border-radius: 12px; transition: background .15s;
+}
+.side-item:hover { background: var(--bg3); }
+.side-item.active { background: var(--text); color: var(--bg); }
+.side-item.active .badge { background: var(--bg); color: var(--text); }
+.side-label { font-size: 12px; color: var(--dim); padding: 14px 8px 4px; border-top: 1px solid var(--line); margin-top: 10px; }
+.side-soon {
+  font-size: 13.5px; font-weight: 700; padding: 9px 12px; border-radius: 12px;
+  color: var(--dim); display: flex; flex-direction: column; gap: 2px; opacity: .8;
+}
+.side-soon small { font-size: 10.5px; font-weight: 400; }
+.side-spacer { flex: 1; }
+.theme-toggle {
+  display: flex; gap: 4px; border: 1px solid var(--line); border-radius: 12px; padding: 4px;
+}
+.theme-toggle button {
+  flex: 1; border: none; background: none; color: var(--dim); font-size: 12.5px; font-weight: 700;
+  padding: 8px 4px; border-radius: 9px; cursor: pointer; font-family: inherit;
+}
+.theme-toggle button.on { background: var(--text); color: var(--bg); }
+.maincol { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.content { padding: 22px; max-width: 1180px; width: 100%; margin: 0 auto; }
+
+/* ---------- 顶栏 ---------- */
+.topbar {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 14px 22px; border-bottom: 1px solid var(--line);
+  background: var(--bg2);
+  position: sticky; top: 0; z-index: 20;
+}
+.topbar-right { display: flex; align-items: center; gap: 12px; }
+.balance-chip {
+  background: var(--bg3); border: 1px solid var(--line); border-radius: 999px;
+  padding: 7px 16px; font-size: 15px;
+}
+.balance-chip .coin { color: var(--gold); margin-right: 6px; }
+.balance-chip b { font-variant-numeric: tabular-nums; }
+.balance-chip.bump { animation: bump .35s ease; }
+@keyframes bump { 40% { transform: scale(1.12); } }
+
+/* ---------- 按钮 ---------- */
+.btn {
+  border: none; border-radius: 10px; padding: 9px 18px; font-size: 14px;
+  cursor: pointer; font-weight: 700; transition: transform .12s, filter .12s;
+  font-family: inherit;
+}
+.btn:hover { transform: translateY(-1px); filter: brightness(1.1); }
+.btn:active { transform: translateY(0); }
+.btn-gold { background: linear-gradient(135deg, #f5c542, #e8940a); color: #201500; }
+.btn-dim { background: var(--bg3); color: var(--text); border: 1px solid var(--line); }
+.btn-danger { background: #3d1520; color: #ff8fa3; border: 1px solid #5c2033; }
+.btn:disabled { opacity: .45; cursor: not-allowed; transform: none; }
+
+/* ---------- 走马灯 ---------- */
+.ticker {
+  overflow: hidden; border-bottom: 1px solid var(--line);
+  background: #0e1320; white-space: nowrap; font-size: 13px;
+}
+.ticker-inner {
+  display: inline-block; padding: 7px 0;
+  animation: marquee 30s linear infinite;
+}
+@keyframes marquee { from { transform: translateX(100vw); } to { transform: translateX(-100%); } }
+.ticker-item { margin-right: 44px; color: var(--dim); }
+.ticker-item b { color: var(--gold); }
+
+.badge {
+  background: var(--bg3); border-radius: 999px; padding: 1px 8px; font-size: 12px;
+  color: var(--dim);
+}
+.tab-panel { display: none; }
+.tab-panel.active { display: block; }
+
+/* ---------- 商店：梯度卡包卡片 ---------- */
+.tier-row {
+  display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px;
+}
+.tier-card {
+  position: relative; border-radius: 16px; padding: 14px 16px; min-height: 104px;
+  color: #fff; cursor: pointer; overflow: hidden; border: none; text-align: left;
+  background: linear-gradient(135deg, var(--tc1), var(--tc2));
+  font-family: inherit; transition: transform .15s, box-shadow .15s, opacity .15s;
+  opacity: .82;
+}
+.tier-card:hover { opacity: 1; transform: translateY(-2px); }
+.tier-card.sel {
+  opacity: 1;
+  box-shadow: 0 0 0 3px var(--bg), 0 0 0 5px var(--tc1), 0 10px 26px rgba(0, 0, 0, .3);
+}
+.tier-name { font-size: 16px; font-weight: 900; letter-spacing: .5px; }
+.tier-name small { display: block; font-size: 10px; font-weight: 700; letter-spacing: 2px; opacity: .85; margin-top: 2px; }
+.tier-price { font-size: 12.5px; opacity: .92; margin-top: 4px; }
+.tier-chase { margin-top: 10px; font-size: 10.5px; letter-spacing: 1px; opacity: .9; }
+.tier-chase b { display: block; color: #7dffa0; font-size: 15px; letter-spacing: 0; margin-top: 1px; }
+.tier-pack {
+  position: absolute; right: -34px; bottom: -58px; pointer-events: none;
+  transform: rotate(14deg) scale(.56); transform-origin: center; opacity: .9;
+}
+
+/* ---------- 商店：中央舞台 ---------- */
+.stage {
+  display: flex; align-items: center; justify-content: center; gap: 26px;
+  padding: 34px 0 14px; min-height: 380px;
+}
+.stage .foilpack { cursor: pointer; transition: transform .3s, filter .3s, opacity .3s; }
+.stage .foilpack.dimmed { filter: grayscale(.85) brightness(.82); opacity: .4; transform: scale(.76); }
+.stage .foilpack:not(.dimmed):hover { transform: translateY(-6px); }
+
+/* ---------- 商店：购买栏 & 保障条 ---------- */
+.buybar { display: flex; justify-content: center; align-items: center; gap: 16px; padding: 8px 0; }
+.qty {
+  display: flex; align-items: center; background: var(--bg2);
+  border: 1px solid var(--line); border-radius: 999px; padding: 4px;
+}
+.qty button {
+  width: 38px; height: 38px; border-radius: 50%; border: none; cursor: pointer;
+  background: var(--bg3); color: var(--text); font-size: 18px; font-weight: 700; font-family: inherit;
+}
+.qty button:hover { filter: brightness(1.15); }
+.qty span { min-width: 46px; text-align: center; font-weight: 800; font-size: 16px; }
+.btn-buy {
+  background: var(--buy-bg); color: var(--buy-fg);
+  border-radius: 999px; padding: 14px 36px; font-size: 16px; font-weight: 800;
+}
+.odds-center { text-align: center; padding: 6px 0 0; }
+.odds-link {
+  background: none; border: none; color: var(--dim); font-size: 12.5px;
+  text-decoration: underline; cursor: pointer; padding: 4px 0;
+  font-family: inherit;
+}
+.odds-link:hover { color: var(--text); }
+.guarantee {
+  display: flex; border: 1px solid var(--line); border-radius: 14px;
+  margin: 18px auto 0; max-width: 640px; background: var(--bg2); overflow: hidden;
+}
+.g-item { flex: 1; text-align: center; padding: 13px 8px; border-left: 1px solid var(--line); }
+.g-item:first-child { border-left: none; }
+.g-item small { display: block; color: var(--dim); font-size: 12px; margin-bottom: 4px; }
+.g-item b { font-size: 15.5px; }
+
+/* ---------- 免费礼包角标 ---------- */
+.freepack {
+  position: fixed; right: 20px; bottom: 20px; z-index: 40;
+  background: var(--buy-bg); color: var(--buy-fg); border: none; cursor: pointer;
+  border-radius: 16px; padding: 12px 16px; font-size: 14px; font-weight: 900; line-height: 1.4;
+  font-family: inherit; transform: rotate(-6deg);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, .4);
+  animation: freepackWiggle 3s ease-in-out infinite;
+}
+@keyframes freepackWiggle {
+  0%, 100% { transform: rotate(-6deg); }
+  50% { transform: rotate(-1deg) scale(1.05); }
+}
+
+/* ---------- 卡片渲染（原卡 & 卡砖） ---------- */
+.tcard { --tc: var(--tier-common); perspective: 700px; width: 158px; }
+.tcard .face {
+  border-radius: 12px; border: 1.5px solid color-mix(in srgb, var(--tc) 65%, #000);
+  background:
+    radial-gradient(circle at 50% 15%, color-mix(in srgb, var(--tc) 30%, transparent), transparent 65%),
+    linear-gradient(160deg, #1b2232, #10141f);
+  box-shadow: 0 0 18px color-mix(in srgb, var(--tc) 28%, transparent);
+  padding: 10px; display: flex; flex-direction: column; gap: 6px; min-height: 210px;
+}
+.tcard.tier-common { --tc: var(--tier-common); }
+.tcard.tier-uncommon { --tc: var(--tier-uncommon); }
+.tcard.tier-rare { --tc: var(--tier-rare); }
+.tcard.tier-epic { --tc: var(--tier-epic); }
+.tcard.tier-legendary { --tc: var(--tier-legendary); }
+.tcard.tier-grail { --tc: var(--tier-grail); }
+.tcard.tier-grail .face { animation: grailGlow 1.6s ease-in-out infinite alternate; }
+@keyframes grailGlow {
+  from { box-shadow: 0 0 18px rgba(251,113,133,.35); }
+  to { box-shadow: 0 0 42px rgba(245,197,66,.65); }
+}
+.slab-label {
+  background: #b91c1c; color: #fff; border-radius: 5px; padding: 4px 7px;
+  font-size: 10.5px; display: flex; justify-content: space-between; align-items: center;
+  font-weight: 700; letter-spacing: .3px;
+}
+.slab-label .g { font-size: 15px; }
+.tcard-art {
+  flex: 1; border-radius: 8px; display: flex; align-items: center; justify-content: center;
+  background: linear-gradient(135deg, color-mix(in srgb, var(--tc) 35%, #0c0f18), #0c0f18);
+  font-size: 40px; min-height: 90px;
+  border: 1px solid color-mix(in srgb, var(--tc) 30%, transparent);
+}
+.tcard-name { font-size: 12.5px; font-weight: 700; line-height: 1.35; }
+.tcard-set { font-size: 10.5px; color: var(--dim); }
+.tcard-value { font-size: 13px; font-weight: 800; color: var(--tc); }
+
+/* ---------- 卡库 ---------- */
+.inv-toolbar { display: flex; align-items: center; justify-content: space-between; margin-bottom: 18px; gap: 12px; flex-wrap: wrap; }
+.inv-summary { color: var(--dim); font-size: 14px; }
+.inv-summary b { color: var(--gold); }
+.card-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); gap: 16px; }
+.inv-item { display: flex; flex-direction: column; gap: 8px; align-items: center; }
+.inv-item .tcard { width: 100%; }
+.inv-actions { display: flex; gap: 6px; width: 100%; }
+.inv-actions .btn { flex: 1; padding: 6px 4px; font-size: 12px; border-radius: 8px; }
+.shipped-tag { font-size: 11.5px; color: var(--tier-uncommon); padding: 6px 0; }
+.empty-hint { color: var(--dim); text-align: center; padding: 60px 0; display: none; }
+
+/* ---------- 记录 ---------- */
+.history-table { width: 100%; border-collapse: collapse; font-size: 13.5px; }
+.history-table th, .history-table td { text-align: left; padding: 9px 10px; border-bottom: 1px solid var(--line); }
+.history-table th { color: var(--dim); font-weight: 600; font-size: 12.5px; }
+.history-table code { font-size: 11.5px; color: var(--dim); }
+.tier-dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 7px; }
+
+/* ---------- 公平性 ---------- */
+.fair-card { background: var(--bg2); border: 1px solid var(--line); border-radius: 18px; padding: 26px; max-width: 780px; }
+.fair-card h2 { margin-bottom: 10px; }
+.fair-card h3 { margin: 26px 0 10px; font-size: 15px; }
+.fair-desc { color: var(--dim); font-size: 13.5px; line-height: 1.8; margin-bottom: 18px; }
+.fair-desc code { color: var(--tier-rare); background: var(--bg3); padding: 1px 6px; border-radius: 5px; }
+.fair-rows { display: flex; flex-direction: column; gap: 12px; margin-bottom: 18px; }
+.fair-row label { display: block; font-size: 12px; color: var(--dim); margin-bottom: 5px; }
+.fair-row code { word-break: break-all; font-size: 12.5px; color: var(--tier-uncommon); }
+.fair-inline { display: flex; gap: 8px; }
+input {
+  background: var(--bg3); border: 1px solid var(--line); color: var(--text);
+  border-radius: 8px; padding: 8px 12px; font-size: 13.5px; width: 100%;
+  font-family: ui-monospace, monospace;
+}
+input:focus { outline: none; border-color: var(--gold); }
+.revealed-list { display: flex; flex-direction: column; gap: 8px; font-size: 12px; }
+.revealed-item { background: var(--bg3); border-radius: 8px; padding: 10px 12px; word-break: break-all; color: var(--dim); }
+.revealed-item code { color: var(--tier-uncommon); }
+.verify-form { display: grid; grid-template-columns: 2fr 1fr 90px auto; gap: 8px; }
+.verify-out { margin-top: 12px; background: var(--bg3); border-radius: 8px; padding: 12px; font-size: 12.5px; word-break: break-all; white-space: pre-wrap; }
+
+/* ---------- 开包动画层 ---------- */
+.overlay { position: fixed; inset: 0; z-index: 50; display: flex; align-items: center; justify-content: center; }
+.overlay[hidden] { display: none; }
+.overlay-bg { position: absolute; inset: 0; background: rgba(4,6,10,.88); backdrop-filter: blur(4px); }
+.overlay-content { position: relative; text-align: center; max-width: 92vw; max-height: 92vh; overflow-y: auto; padding: 20px; }
+.overlay-content::-webkit-scrollbar { display: none; }
+
+/* ---------- ZERO 锡箔卡包 ---------- */
+.foilpack {
+  --pc: #f5c542;
+  position: relative; width: 238px; height: 330px;
+  filter: drop-shadow(0 18px 40px rgba(0, 0, 0, .55));
+  user-select: none;
+}
+.fp-body {
+  position: absolute; inset: 56px 0 0 0; z-index: 3;
+  border-radius: 0 0 10px 10px; overflow: hidden;
+  background:
+    radial-gradient(circle at 30% 18%, color-mix(in srgb, var(--pc) 42%, transparent), transparent 62%),
+    radial-gradient(circle at 78% 85%, color-mix(in srgb, var(--pc) 22%, transparent), transparent 55%),
+    linear-gradient(160deg, #232b44, #12172a 45%, #1c2340 72%, #0e1322);
+  border: 1px solid color-mix(in srgb, var(--pc) 45%, #1a2138); border-top: none;
+  display: flex; flex-direction: column; align-items: center;
+}
+.fp-body::before {
+  /* 划开后露出的包内阴影 */
+  content: ''; position: absolute; top: 0; left: 0; right: 0; height: 12px;
+  background: linear-gradient(180deg, rgba(0, 0, 0, .85), transparent);
+  pointer-events: none;
+}
+.fp-strip {
+  position: absolute; top: 0; left: 0; right: 0; height: 56px; z-index: 4;
+  border-radius: 10px 10px 0 0; overflow: hidden;
+  border: 1px solid color-mix(in srgb, var(--pc) 45%, #1a2138); border-bottom: none;
+  background: linear-gradient(160deg, #232b44, #161c30);
+}
+.fp-crimp {
+  height: 16px;
+  background-color: color-mix(in srgb, var(--pc) 18%, #222a44);
+  background-image: repeating-linear-gradient(90deg, rgba(255, 255, 255, .16) 0 2px, transparent 2px 7px);
+  border-bottom: 1px solid rgba(255, 255, 255, .08);
+}
+.fp-foil {
+  position: absolute; inset: 16px 0 0 0;
+  background:
+    radial-gradient(circle at 35% 130%, color-mix(in srgb, var(--pc) 35%, transparent), transparent 70%),
+    linear-gradient(115deg, transparent 42%, rgba(255, 255, 255, .10) 50%, transparent 58%);
+}
+.fp-crimp-bottom {
+  position: absolute; bottom: 0; left: 0; right: 0;
+  border-bottom: none; border-top: 1px solid rgba(255, 255, 255, .08);
+}
+/* 侧边竖向品牌带（像真实卡包的边条） */
+.fp-band {
+  position: absolute; left: 0; top: 0; bottom: 0; width: 28px; z-index: 2;
+  writing-mode: vertical-rl; display: flex; align-items: center; justify-content: center;
+  background: linear-gradient(180deg, color-mix(in srgb, var(--pc) 85%, #000), color-mix(in srgb, var(--pc) 55%, #000));
+  color: #fff; font-weight: 900; letter-spacing: 5px; font-size: 11.5px;
+  border-radius: 0 0 0 10px;
+}
+.fp-strip .fp-band { border-radius: 10px 0 0 0; font-size: 0; letter-spacing: 0; }
+.fp-sheen {
+  position: absolute; inset: 0; pointer-events: none;
+  background: linear-gradient(115deg, transparent 30%, rgba(255, 255, 255, .14) 45%, rgba(255, 255, 255, .03) 52%, transparent 65%);
+  background-size: 250% 100%;
+  animation: sheen 4.5s ease-in-out infinite;
+}
+@keyframes sheen {
+  0%, 15% { background-position: 120% 0; }
+  55%, 100% { background-position: -60% 0; }
+}
+.fp-logo {
+  margin-top: 52px; font-size: 46px; font-weight: 900; letter-spacing: 9px; padding-left: 9px;
+  background: linear-gradient(180deg, #fff, color-mix(in srgb, var(--pc) 80%, #fff) 45%, var(--pc));
+  -webkit-background-clip: text; background-clip: text; color: transparent;
+  filter: drop-shadow(0 0 14px color-mix(in srgb, var(--pc) 55%, transparent));
+}
+.fp-series { font-size: 17px; font-weight: 800; margin-top: 6px; color: #eef1f8; letter-spacing: 1px; }
+.fp-sub { font-size: 9.5px; letter-spacing: 2px; color: var(--dim); margin-top: 6px; }
+.fp-badge {
+  position: absolute; bottom: 28px; font-size: 11px; font-weight: 700;
+  color: color-mix(in srgb, var(--pc) 85%, #fff);
+  border: 1px solid color-mix(in srgb, var(--pc) 55%, transparent);
+  border-radius: 999px; padding: 4px 12px; letter-spacing: 1px;
+  background: rgba(0, 0, 0, .25);
+}
+
+/* 从包里滑出的卡背 */
+.fp-cardout {
+  position: absolute; top: 60px; left: 50%; width: 172px; height: 240px; z-index: 2;
+  transform: translate(-50%, 26px);
+  transition: transform 1s cubic-bezier(.3, .75, .25, 1);
+}
+.foilpack.opened .fp-cardout { transform: translate(-50%, -195px); }
+.fp-cardback {
+  width: 100%; height: 100%; border-radius: 12px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 68px; font-weight: 900;
+  color: color-mix(in srgb, var(--pc) 70%, #fff);
+  background:
+    repeating-linear-gradient(45deg, rgba(255, 255, 255, .03) 0 8px, transparent 8px 16px),
+    radial-gradient(circle at 50% 40%, #26304e, #10152a 75%);
+  border: 2px solid color-mix(in srgb, var(--pc) 55%, #222a44);
+  box-shadow: 0 6px 24px rgba(0, 0, 0, .5);
+}
+
+/* 刀切系统 */
+.fp-guide {
+  position: absolute; top: 55px; left: 34px; right: 10px; height: 0; z-index: 5;
+  border-top: 2px dashed rgba(255, 255, 255, .38);
+}
+.fp-slit {
+  position: absolute; top: 52px; left: 34px; width: 0; height: 7px; z-index: 6;
+  background: #010204;
+  border-radius: 2px;
+  box-shadow: 0 1px 0 rgba(255, 255, 255, .22), 0 -1px 0 rgba(255, 255, 255, .10), 0 0 8px rgba(0, 0, 0, .9);
+}
+.fp-blade {
+  position: absolute; top: 55px; left: 34px; z-index: 7;
+  margin: -56px 0 0 -8px; pointer-events: none;
+  filter: drop-shadow(0 4px 10px rgba(0, 0, 0, .55));
+  transition: opacity .25s;
+}
+.fp-blade.active { filter: drop-shadow(0 0 12px rgba(255, 255, 255, .3)); }
+.fp-blade.active svg { animation: bladeJitter .12s linear infinite; }
+@keyframes bladeJitter { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(1px); } }
+.fp-cutzone {
+  position: absolute; top: 12px; height: 88px; left: -26px; right: -26px; z-index: 8;
+  cursor: grab; touch-action: none;
+}
+.fp-cutzone:active { cursor: grabbing; }
+
+/* 划开后：顶条掉落 */
+.foilpack.cutdone .fp-guide,
+.foilpack.cutdone .fp-slit,
+.foilpack.cutdone .fp-blade { opacity: 0; }
+.foilpack.cutdone .fp-strip {
+  transform-origin: 12% 100%;
+  animation: stripFall .85s cubic-bezier(.35, .55, .45, 1) forwards;
+}
+@keyframes stripFall {
+  0% { transform: rotate(0) translate(0, 0); }
+  25% { transform: rotate(-7deg) translate(4px, -12px); }
+  100% { transform: rotate(32deg) translate(80px, 230px); opacity: 0; }
+}
+
+/* 舞台 */
+.cut-stage { display: flex; flex-direction: column; align-items: center; gap: 18px; }
+.cut-stage[hidden] { display: none; }
+.cut-stage.done { animation: stageOut .3s ease forwards; }
+@keyframes stageOut { to { opacity: 0; transform: scale(.96); } }
+.pack-holder { padding-top: 190px; }
+.cut-hint { color: var(--dim); font-size: 14px; }
+.cut-tools { display: flex; gap: 10px; }
+
+/* 商店里的迷你卡包 */
+.foilpack.mini { width: 150px; height: 206px; filter: drop-shadow(0 10px 22px rgba(0, 0, 0, .5)); }
+.foilpack.mini .fp-body { inset: 36px 0 0 0; }
+.foilpack.mini .fp-strip { height: 36px; }
+.foilpack.mini .fp-crimp { height: 11px; }
+.foilpack.mini .fp-foil { inset: 11px 0 0 0; }
+.foilpack.mini .fp-logo { margin-top: 24px; font-size: 28px; letter-spacing: 5px; padding-left: 5px; }
+.foilpack.mini .fp-series { font-size: 12px; margin-top: 3px; }
+.foilpack.mini .fp-sub { font-size: 7px; letter-spacing: 1.2px; margin-top: 4px; }
+.foilpack.mini .fp-badge { bottom: 14px; font-size: 9px; padding: 3px 9px; }
+.foilpack.mini .fp-cardout { display: none; }
+.foilpack.mini .fp-band { width: 18px; font-size: 7.5px; letter-spacing: 3px; }
+
+/* ---------- 响应式 ---------- */
+@media (max-width: 960px) {
+  .shell { flex-direction: column; }
+  .sidebar {
+    width: 100%; height: auto; position: static; flex-direction: row; align-items: center;
+    flex-wrap: wrap; gap: 6px; padding: 10px 12px;
+  }
+  .side-psa, .side-label, .side-soon, .side-spacer { display: none; }
+  .side-nav { flex-direction: row; overflow-x: auto; flex: 1; }
+  .side-item { white-space: nowrap; padding: 8px 10px; font-size: 13px; }
+  .theme-toggle { padding: 2px; }
+  .theme-toggle button { padding: 6px 8px; }
+  .tier-row { grid-template-columns: repeat(2, 1fr); }
+  .stage { min-height: auto; padding: 20px 0 8px; }
+  .stage .foilpack.dimmed { display: none; }
+  .content { padding: 14px 12px; }
+}
+
+.reveal-area { display: flex; flex-wrap: wrap; gap: 14px; justify-content: center; margin-bottom: 20px; }
+.reveal-area .tcard { animation: cardIn .5s cubic-bezier(.2,.9,.3,1.2) backwards; }
+.reveal-area .tcard .face { min-height: 224px; }
+@keyframes cardIn {
+  from { transform: rotateY(90deg) translateY(30px); opacity: 0; }
+  to { transform: rotateY(0) translateY(0); opacity: 1; }
+}
+.reveal-total { font-size: 15px; color: var(--dim); margin-bottom: 14px; }
+.reveal-total b { color: var(--gold); font-size: 18px; }
+.reveal-actions { display: flex; flex-direction: column; align-items: center; gap: 10px; }
+.reveal-actions .btn { min-width: 200px; }
+
+.bigwin-banner {
+  font-size: 34px; font-weight: 900; margin-bottom: 16px;
+  background: linear-gradient(90deg, #f5c542, #fb7185, #a78bfa, #f5c542);
+  background-size: 300% 100%;
+  -webkit-background-clip: text; background-clip: text; color: transparent;
+  animation: rainbow 2s linear infinite;
+}
+@keyframes rainbow { to { background-position: 300% 0; } }
+.overlay-bg.bigwin {
+  background:
+    radial-gradient(circle at 50% 45%, rgba(245,197,66,.22), transparent 55%),
+    rgba(4,6,10,.92);
+}
+
+/* ---------- 概率弹窗 ---------- */
+.modal {
+  position: relative; background: var(--bg2); border: 1px solid var(--line);
+  border-radius: 18px; padding: 26px; width: min(680px, 92vw);
+  max-height: 85vh; overflow-y: auto;
+}
+.modal h2 { margin-bottom: 6px; }
+.odds-meta { color: var(--dim); font-size: 13px; margin-bottom: 16px; }
+.odds-table { width: 100%; border-collapse: collapse; font-size: 13.5px; margin-bottom: 18px; }
+.odds-table th, .odds-table td { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--line); }
+.odds-table th { color: var(--dim); font-size: 12.5px; }
+.odds-table .odds-num { font-variant-numeric: tabular-nums; }
+
+/* ---------- Toast ---------- */
+.toast {
+  position: fixed; bottom: 28px; left: 50%; transform: translateX(-50%);
+  background: var(--bg3); border: 1px solid var(--line); color: var(--text);
+  border-radius: 12px; padding: 12px 22px; font-size: 14px; z-index: 100;
+  box-shadow: 0 8px 30px rgba(0,0,0,.5);
+}
+
+@media (max-width: 640px) {
+  .verify-form { grid-template-columns: 1fr; }
+  .topbar { flex-wrap: wrap; gap: 10px; }
+  main { padding: 16px 12px 60px; }
+  .tabs { padding: 8px 10px 0; overflow-x: auto; }
+}
+
+</style>
+</head>
+<body>
+<div class="shell">
+    <aside class="sidebar">
+      <div class="side-logo">ZERO<span>RIPS</span></div>
+      <div class="side-psa">✔ PSA 评级保障</div>
+      <nav class="side-nav">
+        <button class="side-item tab active" data-tab="shop">🎴 经典卡包</button>
+        <button class="side-item tab" data-tab="inventory">🗃 我的卡库 <span class="badge" id="invCount">0</span></button>
+        <button class="side-item tab" data-tab="history">📜 开奖记录</button>
+        <button class="side-item tab" data-tab="fairness">🛡 公平性验证</button>
+      </nav>
+      <div class="side-label">即将上线</div>
+      <div class="side-soon">未评级原卡<small>Coming Soon</small></div>
+      <div class="side-soon">原封卡盒<small>Coming Soon</small></div>
+      <div class="side-spacer"></div>
+      <div class="theme-toggle">
+        <button data-theme-set="light">☀️ 浅色</button>
+        <button data-theme-set="dark">🌙 深色</button>
+      </div>
+    </aside>
+
+    <main class="maincol">
+      <header class="topbar">
+        <div class="topbar-left"></div>
+        <div class="topbar-right">
+          <div class="balance-chip" id="balanceChip">
+            <span class="coin">◉</span><b id="balanceNum">--</b> 币
+          </div>
+          <button class="btn btn-dim" id="topupBtn">模拟充值 +2000</button>
+          <button class="btn btn-gold" id="loginBtn">登录 / 注册</button>
+        </div>
+      </header>
+
+      <div class="ticker" id="ticker" hidden>
+        <div class="ticker-inner" id="tickerInner"></div>
+      </div>
+
+      <div class="content">
+        <section id="tab-shop" class="tab-panel active">
+          <div class="tier-row" id="tierRow"></div>
+          <div class="stage" id="stage"></div>
+          <div class="buybar">
+            <div class="qty">
+              <button id="qtyMinus" aria-label="减少">−</button>
+              <span id="qtyNum">1</span>
+              <button id="qtyPlus" aria-label="增加">+</button>
+            </div>
+            <button class="btn btn-buy" id="buyBtn">立即开包 · ◉ 200</button>
+          </div>
+          <div class="odds-center"><button class="odds-link" id="oddsLink">查看完整概率公示</button></div>
+          <div class="guarantee" id="guaranteeStrip"></div>
+        </section>
+
+        <section id="tab-inventory" class="tab-panel">
+          <div class="inv-toolbar">
+            <div class="inv-summary" id="invSummary"></div>
+            <button class="btn btn-dim" id="sellFloorBtn">一键回收低档卡</button>
+          </div>
+          <div class="card-grid" id="invGrid"></div>
+          <p class="empty-hint" id="invEmpty">卡库空空如也，去开一包吧。</p>
+        </section>
+
+        <section id="tab-history" class="tab-panel">
+          <table class="history-table">
+            <thead>
+              <tr><th>时间</th><th>卡包</th><th>抽中</th><th>评级</th><th>价值</th><th>凭证 (nonce / roll)</th></tr>
+            </thead>
+            <tbody id="historyBody"></tbody>
+          </table>
+          <p class="empty-hint" id="histEmpty">暂无记录。</p>
+        </section>
+
+        <section id="tab-fairness" class="tab-panel">
+          <div class="fair-card">
+            <h2>可验证公平 Provably Fair</h2>
+            <p class="fair-desc">
+              每一抽的结果由三个数决定：<code>roll = HMAC_SHA256(serverSeed, clientSeed:nonce)</code> 的前
+              8 位十六进制除以 2<sup>32</sup>。平台在你开包<b>之前</b>就公示了 serverSeed 的
+              SHA-256 哈希，所以平台无法在你下注后偷偷换种子；轮换种子后旧种子明文公开，你可以逐条复验历史结果。<br><b>本页为纯前端试玩版：serverSeed 在你的浏览器本地生成与保存；正式上线时种子由服务端持有，机制不变。</b>
+            </p>
+            <div class="fair-rows">
+              <div class="fair-row"><label>服务端种子哈希（当前）</label><code id="fairHash">--</code></div>
+              <div class="fair-row">
+                <label>客户端种子（可自定义）</label>
+                <div class="fair-inline">
+                  <input id="clientSeedInput" maxlength="64" spellcheck="false">
+                  <button class="btn btn-dim" id="setSeedBtn">更新</button>
+                </div>
+              </div>
+              <div class="fair-row"><label>下一个 nonce</label><code id="fairNonce">--</code></div>
+            </div>
+            <button class="btn btn-gold" id="rotateBtn">轮换并公开旧种子</button>
+
+            <h3>已公开的历史种子</h3>
+            <div id="revealedList" class="revealed-list"></div>
+
+            <h3>手动复验</h3>
+            <div class="verify-form">
+              <input id="vSeed" placeholder="serverSeed（轮换后公开的明文）" spellcheck="false">
+              <input id="vClient" placeholder="clientSeed" spellcheck="false">
+              <input id="vNonce" placeholder="nonce" type="number" min="0">
+              <button class="btn btn-dim" id="verifyBtn">计算 roll</button>
+            </div>
+            <pre id="verifyOut" class="verify-out" hidden></pre>
+          </div>
+        </section>
+      </div>
+    </main>
+  </div>
+
+  <button class="freepack" id="freePack" hidden>🎁<br>免费礼包</button>
+
+  <!-- 开包动画层 -->
+  <div class="overlay" id="revealOverlay" hidden>
+    <div class="overlay-bg" id="overlayBg"></div>
+    <div class="overlay-content">
+      <div class="cut-stage" id="cutStage" hidden>
+        <div class="pack-holder" id="packHolder"></div>
+        <div class="cut-hint" id="cutHint">🔪 按住刀片，从左向右划开卡包</div>
+        <div class="cut-tools">
+          <button class="btn btn-dim" id="autoCutBtn">快速开包</button>
+          <button class="btn btn-dim" id="cancelCutBtn">取消</button>
+        </div>
+      </div>
+      <div class="reveal-area" id="revealArea" hidden></div>
+      <div class="reveal-actions" id="revealActions" hidden>
+        <div class="reveal-total" id="revealTotal"></div>
+        <button class="btn btn-gold" id="againBtn">再来一发</button>
+        <button class="btn btn-dim" id="closeRevealBtn">收下</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 概率公示弹窗 -->
+  <div class="overlay" id="oddsOverlay" hidden>
+    <div class="overlay-bg" data-close-odds></div>
+    <div class="modal">
+      <h2 id="oddsTitle"></h2>
+      <p class="odds-meta" id="oddsMeta"></p>
+      <table class="odds-table">
+        <thead><tr><th>奖品</th><th>评级</th><th>价值</th><th>概率</th></tr></thead>
+        <tbody id="oddsBody"></tbody>
+      </table>
+      <button class="btn btn-dim" data-close-odds>关闭</button>
+    </div>
+  </div>
+
+  <div class="toast" id="toast" hidden></div>
+<script>
+// ZERO 纯前端引擎（静态试玩版）
+// 把 server.js 的抽卡逻辑完整移植到浏览器：Web Crypto 做 HMAC/SHA-256，
+// 状态存在 localStorage。api(path, body) 与后端版签名完全一致，前端代码零改动。
+// 注意：试玩版的 serverSeed 在你自己的浏览器生成；正式上线时由服务端持有。
+
+const WEIGHT_TOTAL = 1000000;
+const BUYBACK_RATE = 0.9;
+const START_BALANCE = 2000;
+const TOPUP_AMOUNT = 2000;
+const HISTORY_LIMIT = 200;
+const STORE_KEY = 'zero-state-v2';
+
+const PACKS_DATA = [
+  {
+    id: 'starter', name: '新手包', nameEn: 'STARTER PACK', price: 200, theme: 'red',
+    desc: '剑盾 / 朱紫现代卡池，Alt Art 与 SAR 应有尽有。头奖：月亮伊布 Alt Art PSA 10。',
+    guarantee: '大奖 PSA 10 · 含原卡',
+    pool: [
+      { id: 'st-moon10', name: '月亮伊布 Umbreon VMAX (Alt Art)', set: 'Evolving Skies 2021 #215/203', grade: 'PSA 10', value: 45000, weight: 300 },
+      { id: 'st-ray10', name: '烈空坐 Rayquaza VMAX (Alt Art)', set: 'Evolving Skies 2021 #218/203', grade: 'PSA 10', value: 12000, weight: 900 },
+      { id: 'st-lugia10', name: '洛奇亚 Lugia V (Alt Art)', set: 'Silver Tempest 2022 #186/195', grade: 'PSA 10', value: 7000, weight: 1800 },
+      { id: 'st-gira9', name: '骑拉帝纳 Giratina V (Alt Art)', set: 'Lost Origin 2022 #186/196', grade: 'PSA 9', value: 2200, weight: 8000 },
+      { id: 'st-zardsar10', name: '喷火龙 ex SAR', set: 'Obsidian Flames 2023 #223/197', grade: 'PSA 10', value: 1500, weight: 9000 },
+      { id: 'st-pika9', name: '皮卡丘 VMAX (Promo)', set: 'SWSH Promo #SWSH062', grade: 'PSA 9', value: 700, weight: 18000 },
+      { id: 'st-alt', name: '随机 Alt Art 原卡', set: 'SWSH/SV · Alt Art', grade: null, value: 500, weight: 30000,
+        variants: ['冰伊布 Glaceon VMAX', '仙子伊布 Sylveon VMAX', '机擎王 Regidrago V', '雪暴马 Glastrier V'] },
+      { id: 'st-sar', name: '随机 SAR/SIR 原卡', set: 'SV · Special Art Rare', grade: null, value: 240, weight: 60000,
+        variants: ['米立龙 Miraidon ex SAR', '故勒顿 Koraidon ex SAR', '莉莉艾 Lillie SAR', '奇树 Iono SAR'] },
+      { id: 'st-vex', name: '随机 V/ex 卡', set: 'SWSH/SV · Ultra Rare', grade: null, value: 120, weight: 190000,
+        variants: ['路卡利欧 Lucario V', '甲贺忍蛙 Greninja ex', '沙奈朵 Gardevoir ex', '密勒顿 Miraidon ex'] },
+      { id: 'st-common', name: '随机反闪/普卡', set: 'SWSH/SV · C/UC', grade: null, value: 35, weight: 682000,
+        variants: ['新叶喵 Sprigatito', '呆火鳄 Fuecoco', '润水鸭 Quaxly', '布拨 Pawmi', '迷你芙 Smoliv', '可达鸭 Psyduck'] }
+    ]
+  },
+  {
+    id: 'silver', name: '白银包', nameEn: 'SILVER PACK', price: 500, theme: 'blue',
+    desc: '1999–2000 初代复古卡池：Base Set / Jungle / Fossil / Team Rocket。头奖：初版喷火龙 PSA 10。',
+    guarantee: '大奖 PSA 10 · 含原卡',
+    pool: [
+      { id: 'sv-zard10', name: '喷火龙 Charizard', set: 'Base Set 1999 #4/102', grade: 'PSA 10', value: 100000, weight: 600 },
+      { id: 'sv-zard8', name: '喷火龙 Charizard', set: 'Base Set 1999 #4/102', grade: 'PSA 8', value: 15000, weight: 2500 },
+      { id: 'sv-stoise9', name: '水箭龟 Blastoise', set: 'Base Set 1999 #2/102', grade: 'PSA 9', value: 9000, weight: 4500 },
+      { id: 'sv-saur9', name: '妙蛙花 Venusaur', set: 'Base Set 1999 #15/102', grade: 'PSA 9', value: 7000, weight: 5500 },
+      { id: 'sv-dzard9', name: '黑暗喷火龙 Dark Charizard', set: 'Team Rocket 2000 #4/82', grade: 'PSA 9', value: 3500, weight: 12000 },
+      { id: 'sv-gyara9', name: '暴鲤龙 Gyarados', set: 'Base Set 1999 #6/102', grade: 'PSA 9', value: 1800, weight: 25000 },
+      { id: 'sv-jolt8', name: '雷伊布 Jolteon', set: 'Jungle 1999 #4/64', grade: 'PSA 8', value: 900, weight: 40000 },
+      { id: 'sv-lapras8', name: '拉普拉斯 Lapras', set: 'Fossil 1999 #10/62', grade: 'PSA 8', value: 600, weight: 60000 },
+      { id: 'sv-holo', name: '随机初代闪卡', set: 'WotC 1999–2000 · Holo', grade: null, value: 350, weight: 120000,
+        variants: ['风速狗 Arcanine', '胡地 Alakazam', '快龙 Dragonite', '耿鬼 Gengar', '雷丘 Raichu', '梦幻 Mew (Promo)', '袋兽 Kangaskhan'] },
+      { id: 'sv-rare', name: '随机初代稀有卡', set: 'WotC 1999–2000 · Rare', grade: null, value: 130, weight: 300000,
+        variants: ['皮可西 Clefable', '大食花 Victreebel', '九尾 Ninetales', '椰蛋树 Exeggutor', '嘎啦嘎啦 Marowak'] },
+      { id: 'sv-common', name: '随机初代普卡', set: 'WotC 1999–2000 · C/UC', grade: null, value: 30, weight: 429900,
+        variants: ['皮卡丘 Pikachu', '小火龙 Charmander', '杰尼龟 Squirtle', '妙蛙种子 Bulbasaur', '鲤鱼王 Magikarp', '波波 Pidgey', '喵喵 Meowth', '卡拉卡拉 Cubone'] }
+    ]
+  },
+  {
+    id: 'gold', name: '黄金包', nameEn: 'GOLD PACK', price: 1000, theme: 'gold',
+    desc: '每一抽必得评级卡砖（slab）。头奖：闪光喷火龙 Neo Destiny PSA 10。',
+    guarantee: '每抽必得 PSA 8+',
+    pool: [
+      { id: 'g-shining10', name: '闪光喷火龙 Shining Charizard', set: 'Neo Destiny 2001 #107/105', grade: 'PSA 10', value: 300000, weight: 100 },
+      { id: 'g-goldstar9', name: '月亮伊布 Umbreon (Gold Star)', set: 'POP Series 5 2007 #17/17', grade: 'PSA 9', value: 60000, weight: 400 },
+      { id: 'g-moon10', name: '月亮伊布 Umbreon VMAX (Alt Art)', set: 'Evolving Skies 2021 #215/203', grade: 'PSA 10', value: 45000, weight: 600 },
+      { id: 'g-zard9', name: '喷火龙 Charizard', set: 'Base Set 1999 #4/102', grade: 'PSA 9', value: 35000, weight: 900 },
+      { id: 'g-gira10', name: '骑拉帝纳 Giratina V (Alt Art)', set: 'Lost Origin 2022 #186/196', grade: 'PSA 10', value: 4500, weight: 20000 },
+      { id: 'g-zardupc10', name: '喷火龙 V (UPC Promo)', set: 'SWSH Promo #SWSH260', grade: 'PSA 10', value: 3500, weight: 30000 },
+      { id: 'g-hot10', name: '随机热门现代卡', set: '2021–2025 · Modern', grade: 'PSA 10', value: 1400, weight: 150000,
+        variants: ['长毛巨魔 Annihilape ex', '帕底亚三御三家 SAR', '伊布家族 Promo', '梦幻 Mew ex SIR'] },
+      { id: 'g-mid9', name: '随机现代卡', set: '2021–2025 · Modern', grade: 'PSA 9', value: 700, weight: 350000,
+        variants: ['洗翠 Hisuian 系列', '宝可梦 GO 联动卡', '25 周年 Promo', 'VSTAR 宇宙精选'] },
+      { id: 'g-floor', name: '随机评级卡砖', set: '混合年代 · Slab', grade: 'PSA 8/9', value: 320, weight: 448000,
+        variants: ['剑盾 V 卡砖', '朱紫 ex 卡砖', 'XY 时代闪卡砖', '日月 GX 卡砖'] }
+    ]
+  },
+  {
+    id: 'diamond', name: '钻石包', nameEn: 'DIAMOND PACK', price: 2000, theme: 'purple',
+    desc: '殿堂级卡池，每一抽必得 PSA 9 以上卡砖。头奖：初版无阴影喷火龙 PSA 9。',
+    guarantee: '每抽必得 PSA 9+',
+    pool: [
+      { id: 'd-zard1st9', name: '初版喷火龙 Charizard (1st Ed.)', set: 'Base Set 1st Edition 1999 #4/102', grade: 'PSA 9', value: 600000, weight: 60 },
+      { id: 'd-lugia10', name: '洛奇亚 Lugia', set: 'Neo Genesis 2000 #9/111', grade: 'PSA 10', value: 150000, weight: 300 },
+      { id: 'd-goldstar10', name: '月亮伊布 Umbreon (Gold Star)', set: 'POP Series 5 2007 #17/17', grade: 'PSA 10', value: 90000, weight: 800 },
+      { id: 'd-zard10', name: '喷火龙 Charizard', set: 'Base Set 1999 #4/102', grade: 'PSA 10', value: 100000, weight: 700 },
+      { id: 'd-moon10', name: '月亮伊布 Umbreon VMAX (Alt Art)', set: 'Evolving Skies 2021 #215/203', grade: 'PSA 10', value: 45000, weight: 3000 },
+      { id: 'd-ray10', name: '烈空坐 Rayquaza VMAX (Alt Art)', set: 'Evolving Skies 2021 #218/203', grade: 'PSA 10', value: 12000, weight: 20000 },
+      { id: 'd-gira10', name: '骑拉帝纳 Giratina V (Alt Art)', set: 'Lost Origin 2022 #186/196', grade: 'PSA 10', value: 4500, weight: 80000 },
+      { id: 'd-hot10', name: '随机热门现代卡', set: '2021–2025 · Modern', grade: 'PSA 10', value: 1400, weight: 300000,
+        variants: ['长毛巨魔 Annihilape ex', '帕底亚三御三家 SAR', '伊布家族 Promo', '梦幻 Mew ex SIR'] },
+      { id: 'd-floor9', name: '随机现代卡', set: '2021–2025 · Modern', grade: 'PSA 9', value: 800, weight: 595140,
+        variants: ['洗翠 Hisuian 系列', '宝可梦 GO 联动卡', '25 周年 Promo', 'VSTAR 宇宙精选', 'Alt Art 精选'] }
+    ]
+  }
+];
+
+// 启动校验：概率总和必须精确 100%
+for (const pk of PACKS_DATA) {
+  const sum = pk.pool.reduce((s, c) => s + c.weight, 0);
+  if (sum !== WEIGHT_TOTAL) throw new Error(`卡包 ${pk.id} 概率总和错误: ${sum}`);
+}
+
+// ---------- Web Crypto 工具 ----------
+const _enc = new TextEncoder();
+function _hex(buf) { return [...new Uint8Array(buf)].map(x => x.toString(16).padStart(2, '0')).join(''); }
+async function sha256hex(str) { return _hex(await crypto.subtle.digest('SHA-256', _enc.encode(str))); }
+async function hmacHex(key, msg) {
+  const k = await crypto.subtle.importKey('raw', _enc.encode(key), { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']);
+  return _hex(await crypto.subtle.sign('HMAC', k, _enc.encode(msg)));
+}
+function randHex(bytes) {
+  const a = new Uint8Array(bytes);
+  crypto.getRandomValues(a);
+  return [...a].map(x => x.toString(16).padStart(2, '0')).join('');
+}
+function randInt(n) {
+  return crypto.getRandomValues(new Uint32Array(1))[0] % n;
+}
+
+// ---------- 引擎状态 ----------
+let ST = null;
+
+async function freshSeeds() {
+  const serverSeed = randHex(32);
+  return { serverSeed, serverSeedHash: await sha256hex(serverSeed), clientSeed: randHex(4), nonce: 0 };
+}
+
+async function ensureEngine() {
+  if (ST) return;
+  try {
+    const s = JSON.parse(localStorage.getItem(STORE_KEY));
+    if (s && s.seeds && Array.isArray(s.inventory)) { ST = s; return; }
+  } catch (e) { /* 无存档或已损坏 */ }
+  ST = {
+    balance: START_BALANCE, inventory: [], history: [],
+    stats: { opened: 0, spent: 0, recovered: 0, topups: 0 },
+    seeds: await freshSeeds(), revealedSeeds: []
+  };
+  persist();
+}
+
+function persist() {
+  try { localStorage.setItem(STORE_KEY, JSON.stringify(ST)); } catch (e) { /* 隐私模式等场景忽略 */ }
+}
+
+// ---------- 抽卡核心（与 server.js 逻辑一致） ----------
+async function rollAt(serverSeed, clientSeed, nonce) {
+  const h = await hmacHex(serverSeed, `${clientSeed}:${nonce}`);
+  return parseInt(h.slice(0, 8), 16) / 0x100000000;
+}
+
+function pickCard(pack, roll) {
+  let threshold = roll * WEIGHT_TOTAL;
+  for (const card of pack.pool) {
+    threshold -= card.weight;
+    if (threshold < 0) return card;
+  }
+  return pack.pool[pack.pool.length - 1];
+}
+
+function tierOf(value, price) {
+  const x = value / price;
+  if (x >= 50) return 'grail';
+  if (x >= 10) return 'legendary';
+  if (x >= 3) return 'epic';
+  if (x >= 1) return 'rare';
+  if (x >= 0.4) return 'uncommon';
+  return 'common';
+}
+
+async function openOne(pack) {
+  const seeds = ST.seeds;
+  const nonce = seeds.nonce;
+  const roll = await rollAt(seeds.serverSeed, seeds.clientSeed, nonce);
+  seeds.nonce += 1;
+  const card = pickCard(pack, roll);
+  const displayName = card.variants ? card.variants[randInt(card.variants.length)] : card.name;
+  return {
+    uid: randHex(8), packId: pack.id, packName: pack.name,
+    cardId: card.id, name: displayName, poolName: card.name,
+    set: card.set, grade: card.grade, value: card.value,
+    tier: tierOf(card.value, pack.price), status: 'owned', at: Date.now(),
+    proof: {
+      serverSeedHash: seeds.serverSeedHash, clientSeed: seeds.clientSeed,
+      nonce, roll: Number(roll.toFixed(10))
+    }
+  };
+}
+
+function packPublicView(pack) {
+  const ev = pack.pool.reduce((s, c) => s + (c.value * c.weight) / WEIGHT_TOTAL, 0);
+  return {
+    id: pack.id, name: pack.name, nameEn: pack.nameEn, price: pack.price,
+    theme: pack.theme, desc: pack.desc, guarantee: pack.guarantee || null,
+    ev: Math.round(ev * 10) / 10,
+    rtp: Math.round((ev / pack.price) * 1000) / 10,
+    pool: pack.pool.map((c) => ({
+      id: c.id, name: c.name, set: c.set, grade: c.grade, value: c.value,
+      odds: c.weight / WEIGHT_TOTAL, tier: tierOf(c.value, pack.price)
+    }))
+  };
+}
+
+function publicState() {
+  return {
+    balance: ST.balance, inventory: ST.inventory, history: ST.history.slice(0, 60),
+    stats: ST.stats,
+    fairness: {
+      serverSeedHash: ST.seeds.serverSeedHash, clientSeed: ST.seeds.clientSeed,
+      nonce: ST.seeds.nonce, revealedSeeds: ST.revealedSeeds.slice(-10)
+    },
+    buybackRate: BUYBACK_RATE
+  };
+}
+
+// ---------- 本地 api()：与后端版签名一致 ----------
+async function api(path, body) {
+  await ensureEngine();
+  const [route, query] = path.split('?');
+  const params = new URLSearchParams(query || '');
+
+  if (route === '/api/state') return publicState();
+  if (route === '/api/packs') return PACKS_DATA.map(packPublicView);
+
+  if (route === '/api/verify') {
+    const serverSeed = params.get('serverSeed') || '';
+    const clientSeed = params.get('clientSeed') || '';
+    const nonce = parseInt(params.get('nonce') || '0', 10);
+    if (!serverSeed || !clientSeed || Number.isNaN(nonce)) throw new Error('参数缺失：serverSeed / clientSeed / nonce');
+    return {
+      serverSeedHash: await sha256hex(serverSeed),
+      roll: Number((await rollAt(serverSeed, clientSeed, nonce)).toFixed(10))
+    };
+  }
+
+  if (route === '/api/open') {
+    const pack = PACKS_DATA.find((p) => p.id === body.packId);
+    if (!pack) throw new Error('卡包不存在');
+    const count = Math.min(10, Math.max(1, parseInt(body.count, 10) || 1));
+    const cost = pack.price * count;
+    if (ST.balance < cost) throw new Error(`余额不足：需要 ${cost} 币，当前 ${ST.balance} 币`);
+    ST.balance -= cost;
+    ST.stats.spent += cost;
+    ST.stats.opened += count;
+    const items = [];
+    for (let i = 0; i < count; i++) {
+      const item = await openOne(pack);
+      items.push(item);
+      ST.inventory.unshift(item);
+      ST.history.unshift({
+        uid: item.uid, name: item.name, grade: item.grade, set: item.set,
+        value: item.value, tier: item.tier, packName: pack.name, at: item.at, proof: item.proof
+      });
+    }
+    ST.history = ST.history.slice(0, HISTORY_LIMIT);
+    persist();
+    return { items, balance: ST.balance };
+  }
+
+  if (route === '/api/sell') {
+    const uids = Array.isArray(body.uids) ? body.uids : [body.uid];
+    let credit = 0;
+    const sold = [];
+    for (const uid of uids) {
+      const idx = ST.inventory.findIndex((i) => i.uid === uid && i.status === 'owned');
+      if (idx === -1) continue;
+      const [item] = ST.inventory.splice(idx, 1);
+      credit += Math.floor(item.value * BUYBACK_RATE);
+      sold.push(item.uid);
+    }
+    if (!sold.length) throw new Error('没有可回收的卡');
+    ST.balance += credit;
+    ST.stats.recovered += credit;
+    persist();
+    return { credit, sold, balance: ST.balance };
+  }
+
+  if (route === '/api/sell-floor') {
+    const floorTiers = new Set(['common', 'uncommon']);
+    let credit = 0, count = 0;
+    ST.inventory = ST.inventory.filter((i) => {
+      if (i.status === 'owned' && floorTiers.has(i.tier)) {
+        credit += Math.floor(i.value * BUYBACK_RATE);
+        count += 1;
+        return false;
+      }
+      return true;
+    });
+    if (!count) throw new Error('没有低档卡可回收');
+    ST.balance += credit;
+    ST.stats.recovered += credit;
+    persist();
+    return { credit, count, balance: ST.balance };
+  }
+
+  if (route === '/api/ship') {
+    const item = ST.inventory.find((i) => i.uid === body.uid && i.status === 'owned');
+    if (!item) throw new Error('找不到该卡或已申请发货');
+    item.status = 'shipped';
+    persist();
+    return { item };
+  }
+
+  if (route === '/api/topup') {
+    const amount = Math.min(5000, Math.max(1, parseInt(body && body.amount, 10) || TOPUP_AMOUNT));
+    ST.balance += amount;
+    ST.stats.topups += 1;
+    persist();
+    return { balance: ST.balance, added: amount };
+  }
+
+  if (route === '/api/client-seed') {
+    const seed = String(body.clientSeed || '').trim();
+    if (!/^[\w-]{1,64}$/.test(seed)) throw new Error('客户端种子只能是 1–64 位字母数字');
+    ST.seeds.clientSeed = seed;
+    persist();
+    return { clientSeed: seed };
+  }
+
+  if (route === '/api/rotate-seed') {
+    const old = ST.seeds;
+    ST.revealedSeeds.push({
+      serverSeed: old.serverSeed, serverSeedHash: old.serverSeedHash,
+      clientSeed: old.clientSeed, lastNonce: old.nonce - 1, revealedAt: Date.now()
+    });
+    ST.seeds = await freshSeeds();
+    persist();
+    return {
+      revealed: ST.revealedSeeds[ST.revealedSeeds.length - 1],
+      serverSeedHash: ST.seeds.serverSeedHash, clientSeed: ST.seeds.clientSeed
+    };
+  }
+
+  if (route === '/api/reset') {
+    ST = null;
+    try { localStorage.removeItem(STORE_KEY); } catch (e) { /* 忽略 */ }
+    await ensureEngine();
+    return publicState();
+  }
+
+  throw new Error('unknown api: ' + route);
+}
+
+// ZERO RIPS 前端逻辑
+const $ = (sel) => document.querySelector(sel);
+
+const TIER_LABEL = {
+  common: '普通', uncommon: '优良', rare: '稀有',
+  epic: '史诗', legendary: '传说', grail: '圣杯'
+};
+const TIER_COLOR = {
+  common: 'var(--tier-common)', uncommon: 'var(--tier-uncommon)', rare: 'var(--tier-rare)',
+  epic: 'var(--tier-epic)', legendary: 'var(--tier-legendary)', grail: 'var(--tier-grail)'
+};
+const THEME_COLOR = { red: '#f04a4a', blue: '#5b8def', gold: '#f5c542', purple: '#8b5cf6' };
+const TIER_GRAD = {
+  red: ['#e14848', '#8f1f1f'],
+  blue: ['#5b8def', '#2c4f9e'],
+  gold: ['#d9a514', '#8a6403'],
+  purple: ['#8b5cf6', '#5b32b5']
+};
+const EMOJI = ['🔥', '💧', '⚡', '🌿', '🌙', '⭐', '🐉', '👻', '❄️', '🌊'];
+
+let packs = [];
+let state = null;
+let lastPackId = null;
+
+// ---------- 工具 ----------
+
+
+function fmt(n) { return n.toLocaleString('zh-CN'); }
+
+function emojiFor(name) {
+  let h = 0;
+  for (const ch of name) h = (h * 31 + ch.codePointAt(0)) >>> 0;
+  return EMOJI[h % EMOJI.length];
+}
+
+function oddsText(p) {
+  const pct = p * 100;
+  if (pct >= 1) return pct.toFixed(pct >= 10 ? 1 : 2) + '%';
+  if (pct >= 0.01) return pct.toFixed(3).replace(/0+$/, '').replace(/\.$/, '') + '%';
+  return pct.toExponential(2) + '%';
+}
+
+let toastTimer = null;
+function toast(msg) {
+  const el = $('#toast');
+  el.textContent = msg;
+  el.hidden = false;
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => { el.hidden = true; }, 2600);
+}
+
+function setBalance(n) {
+  state.balance = n;
+  $('#balanceNum').textContent = fmt(n);
+  const chip = $('#balanceChip');
+  chip.classList.remove('bump');
+  void chip.offsetWidth;
+  chip.classList.add('bump');
+}
+
+// ---------- 卡片 DOM ----------
+function cardEl(item, delay = 0) {
+  const div = document.createElement('div');
+  div.className = `tcard tier-${item.tier}`;
+  const face = document.createElement('div');
+  face.className = 'face';
+  if (delay) div.style.animationDelay = `${delay}ms`;
+
+  if (item.grade) {
+    const label = document.createElement('div');
+    label.className = 'slab-label';
+    label.innerHTML = `<span>${item.grade.split(' ')[0]}</span><span class="g">${item.grade.split(' ')[1] || ''}</span>`;
+    face.appendChild(label);
+  }
+  const art = document.createElement('div');
+  art.className = 'tcard-art';
+  art.textContent = emojiFor(item.name);
+  const name = document.createElement('div');
+  name.className = 'tcard-name';
+  name.textContent = item.name;
+  const set = document.createElement('div');
+  set.className = 'tcard-set';
+  set.textContent = item.set + (item.grade ? '' : ' · 原卡');
+  const value = document.createElement('div');
+  value.className = 'tcard-value';
+  value.textContent = `◉ ${fmt(item.value)} · ${TIER_LABEL[item.tier]}`;
+  face.append(art, name, set, value);
+  div.appendChild(face);
+  return div;
+}
+
+// ---------- ZERO 锡箔卡包 ----------
+const BLADE_SVG = `
+<svg width="76" height="62" viewBox="0 0 76 62" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="bladeGrad" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#eef2f8"/>
+      <stop offset=".55" stop-color="#aeb9cc"/>
+      <stop offset="1" stop-color="#7e8aa0"/>
+    </linearGradient>
+  </defs>
+  <polygon points="8,56 40,56 40,38 22,38" fill="url(#bladeGrad)" stroke="#5d6880" stroke-width="1"/>
+  <line x1="13" y1="52.5" x2="36" y2="52.5" stroke="#ffffff" stroke-opacity=".55" stroke-width="1.5"/>
+  <rect x="36" y="30" width="36" height="20" rx="5" fill="#39476b" stroke="#5d6f9e" stroke-width="1.5"/>
+  <rect x="43" y="35" width="17" height="10" rx="3" fill="#232c48"/>
+  <circle cx="66" cy="40" r="2" fill="#8fa2cf"/>
+</svg>`;
+
+function foilPackEl(pack, { mini = false, interactive = false } = {}) {
+  const el = document.createElement('div');
+  el.className = 'foilpack' + (mini ? ' mini' : '');
+  el.style.setProperty('--pc', THEME_COLOR[pack.theme] || '#f5c542');
+  const band = pack.nameEn.split(' ')[0];
+  el.innerHTML = `
+    <div class="fp-cardout"><div class="fp-cardback">Z</div></div>
+    <div class="fp-body">
+      <div class="fp-band">${band}</div>
+      <div class="fp-logo">ZERO</div>
+      <div class="fp-series">${pack.name}</div>
+      <div class="fp-sub">${pack.nameEn} · TCG MYSTERY</div>
+      <div class="fp-badge">◉ ${fmt(pack.price)} / 抽</div>
+      <div class="fp-sheen"></div>
+      <div class="fp-crimp fp-crimp-bottom"></div>
+    </div>
+    <div class="fp-strip">
+      <div class="fp-crimp"></div>
+      <div class="fp-foil"></div>
+      <div class="fp-band"></div>
+    </div>
+    ${interactive ? `
+    <div class="fp-guide"></div>
+    <div class="fp-slit"></div>
+    <div class="fp-blade">${BLADE_SVG}</div>
+    <div class="fp-cutzone"></div>` : ''}`;
+  return el;
+}
+
+// 刀切交互：progress 单调递增，划满即触发 onDone（只触发一次）
+function setupCutter(packEl, onDone) {
+  const blade = packEl.querySelector('.fp-blade');
+  const slit = packEl.querySelector('.fp-slit');
+  const zone = packEl.querySelector('.fp-cutzone');
+  const INSET_L = 34, INSET_R = 10; // 切割线避开左侧品牌带
+  let progress = 0, dragging = false, done = false;
+
+  function apply() {
+    const w = packEl.clientWidth - INSET_L - INSET_R;
+    slit.style.width = `${progress * w}px`;
+    blade.style.left = `${INSET_L + progress * w}px`;
+  }
+  function finish() {
+    done = true;
+    dragging = false;
+    zone.style.pointerEvents = 'none';
+    blade.classList.remove('active');
+    packEl.classList.add('cutdone');
+    onDone();
+  }
+  function advance(p) {
+    if (done) return;
+    // 只允许向前推进，且单次事件最多前进 20%，防止直接点右端瞬开
+    if (p > progress) progress = Math.min(p, progress + 0.2);
+    apply();
+    if (progress >= 0.99) finish();
+  }
+
+  zone.addEventListener('pointerdown', (e) => {
+    if (done) return;
+    dragging = true;
+    blade.classList.add('active');
+    zone.setPointerCapture(e.pointerId);
+  });
+  zone.addEventListener('pointermove', (e) => {
+    if (!dragging || done) return;
+    const r = packEl.getBoundingClientRect();
+    advance((e.clientX - r.left - INSET_L) / (r.width - INSET_L - INSET_R));
+  });
+  const stop = () => { dragging = false; blade.classList.remove('active'); };
+  zone.addEventListener('pointerup', stop);
+  zone.addEventListener('pointercancel', stop);
+  apply();
+
+  return {
+    autoCut() {
+      if (done) return;
+      const start = progress;
+      const t0 = performance.now();
+      const tick = (t) => {
+        if (done) return;
+        const k = Math.min(1, (t - t0) / 550);
+        progress = start + (1 - start) * k;
+        apply();
+        if (progress >= 0.99) { finish(); return; }
+        requestAnimationFrame(tick);
+      };
+      requestAnimationFrame(tick);
+    },
+    get done() { return done; }
+  };
+}
+
+// ---------- 卡包商店：梯度卡片 + 舞台 + 购买栏 ----------
+let selectedPackId = null;
+let qty = 1;
+
+function currentPack() {
+  return packs.find(p => p.id === selectedPackId) || packs[0];
+}
+
+function selectPack(id) {
+  selectedPackId = id;
+  renderShop();
+}
+
+function renderShop() {
+  if (!packs.length) return;
+  if (!selectedPackId) selectedPackId = packs[0].id;
+  const cur = currentPack();
+
+  // 梯度价位卡片行
+  const tierRow = $('#tierRow');
+  tierRow.innerHTML = '';
+  for (const pack of packs) {
+    const jackpot = pack.pool.reduce((a, b) => (b.value > a.value ? b : a));
+    const [c1, c2] = TIER_GRAD[pack.theme] || TIER_GRAD.gold;
+    const el = document.createElement('button');
+    el.className = 'tier-card' + (pack.id === selectedPackId ? ' sel' : '');
+    el.style.setProperty('--tc1', c1);
+    el.style.setProperty('--tc2', c2);
+    el.innerHTML = `
+      <div class="tier-name">${pack.name}<small>${pack.nameEn}</small></div>
+      <div class="tier-price">◉ ${fmt(pack.price)} / 包</div>
+      <div class="tier-chase">TOP CHASE<b>◉ ${fmt(jackpot.value)}</b></div>
+      <div class="tier-pack"></div>`;
+    el.querySelector('.tier-pack').appendChild(foilPackEl(pack, { mini: true }));
+    el.onclick = () => selectPack(pack.id);
+    tierRow.appendChild(el);
+  }
+
+  // 中央舞台：选中的亮，其余变灰
+  const stage = $('#stage');
+  stage.innerHTML = '';
+  for (const pack of packs) {
+    const el = foilPackEl(pack);
+    if (pack.id !== selectedPackId) el.classList.add('dimmed');
+    el.onclick = () => (pack.id === selectedPackId ? openPack(pack, qty) : selectPack(pack.id));
+    stage.appendChild(el);
+  }
+
+  // 购买栏 & 保障条
+  updateBuyBar();
+  const minVal = Math.min(...cur.pool.map(c => c.value));
+  $('#guaranteeStrip').innerHTML = `
+    <div class="g-item"><small>包内保障</small><b>${cur.guarantee || '—'}</b></div>
+    <div class="g-item"><small>最低保底价值</small><b>◉ ${fmt(minVal)}</b></div>
+    <div class="g-item"><small>即时回收</small><b>${Math.round((state?.buybackRate ?? 0.9) * 100)}%</b></div>`;
+}
+
+function updateBuyBar() {
+  const cur = currentPack();
+  $('#qtyNum').textContent = qty;
+  $('#buyBtn').textContent = `立即开包 · ◉ ${fmt(cur.price * qty)}${qty > 1 ? ` (x${qty})` : ''}`;
+}
+
+$('#qtyMinus').onclick = () => { qty = Math.max(1, qty - 1); updateBuyBar(); };
+$('#qtyPlus').onclick = () => { qty = Math.min(10, qty + 1); updateBuyBar(); };
+$('#buyBtn').onclick = () => openPack(currentPack(), qty);
+$('#oddsLink').onclick = () => showOdds(currentPack());
+
+function showOdds(pack) {
+  $('#oddsTitle').textContent = `${pack.name} · 概率公示`;
+  $('#oddsMeta').textContent =
+    `单价 ◉ ${fmt(pack.price)} ｜ 期望回报 ◉ ${fmt(pack.ev)}（RTP ${pack.rtp}%）｜ 回收价 = 标价 × ${Math.round((state?.buybackRate ?? 0.9) * 100)}%`;
+  const body = $('#oddsBody');
+  body.innerHTML = '';
+  for (const c of pack.pool) {
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td><span class="tier-dot" style="background:${TIER_COLOR[c.tier]}"></span>${c.name}<br><small style="color:var(--dim)">${c.set}</small></td>
+      <td>${c.grade || '原卡'}</td>
+      <td class="odds-num">◉ ${fmt(c.value)}</td>
+      <td class="odds-num">${oddsText(c.odds)}</td>`;
+    body.appendChild(tr);
+  }
+  $('#oddsOverlay').hidden = false;
+}
+
+// ---------- 开包：刀切锡箔卡包 ----------
+let opening = false;
+async function openPack(pack, count) {
+  if (opening) return;
+  const cost = pack.price * count;
+  if (state.balance < cost) {
+    toast(`余额不足：需要 ◉ ${fmt(cost)}，先点右上角"模拟充值"`);
+    return;
+  }
+  opening = true;
+  lastPackId = { pack, count };
+
+  const overlay = $('#revealOverlay');
+  const stage = $('#cutStage');
+  const holder = $('#packHolder');
+  const revealArea = $('#revealArea');
+  const actions = $('#revealActions');
+
+  overlay.hidden = false;
+  $('#overlayBg').classList.remove('bigwin');
+  revealArea.hidden = true;
+  revealArea.innerHTML = '';
+  actions.hidden = true;
+  stage.hidden = false;
+  stage.classList.remove('done');
+  holder.innerHTML = '';
+  $('#cutHint').textContent = count > 1
+    ? `🔪 按住刀片，从左向右划开卡包 · x${count} 连抽`
+    : '🔪 按住刀片，从左向右划开卡包';
+  $('#cancelCutBtn').hidden = false;
+
+  const packEl = foilPackEl(pack, { interactive: true });
+  holder.appendChild(packEl);
+
+  const cutter = setupCutter(packEl, async () => {
+    // 划满的瞬间才真正下注开包
+    $('#cancelCutBtn').hidden = true;
+    let data;
+    try {
+      data = await api('/api/open', { packId: pack.id, count });
+    } catch (e) {
+      overlay.hidden = true;
+      opening = false;
+      toast(e.message);
+      return;
+    }
+    setBalance(data.balance);
+
+    // 顶条掉落 → 卡从包里滑出 → 舞台淡出 → 翻牌
+    setTimeout(() => packEl.classList.add('opened'), 420);
+    setTimeout(() => stage.classList.add('done'), 1400);
+    setTimeout(() => {
+      stage.hidden = true;
+      showResults(pack, count, data);
+    }, 1700);
+  });
+
+  $('#autoCutBtn').onclick = () => cutter.autoCut();
+  $('#cancelCutBtn').onclick = () => {
+    if (cutter.done) return; // 已下注就不能反悔了
+    overlay.hidden = true;
+    opening = false;
+  };
+}
+
+function showResults(pack, count, data) {
+  const revealArea = $('#revealArea');
+  revealArea.hidden = false;
+
+  const best = data.items.reduce((a, b) => (b.value > a.value ? b : a));
+  const isBigWin = best.tier === 'legendary' || best.tier === 'grail';
+  if (isBigWin) {
+    $('#overlayBg').classList.add('bigwin');
+    const banner = document.createElement('div');
+    banner.className = 'bigwin-banner';
+    banner.style.flexBasis = '100%';
+    banner.textContent = best.tier === 'grail' ? '🎉 圣 杯 降 临 ！' : '✨ 传 说 大 奖 ！';
+    revealArea.appendChild(banner);
+  }
+  data.items.forEach((item, i) => revealArea.appendChild(cardEl(item, i * 140)));
+
+  const total = data.items.reduce((s, i) => s + i.value, 0);
+  $('#revealTotal').innerHTML =
+    `本次花费 ◉ ${fmt(pack.price * count)} ｜ 抽中总价值 <b>◉ ${fmt(total)}</b>`;
+  $('#revealActions').hidden = false;
+  refreshStateSoft();
+}
+
+$('#againBtn').onclick = () => {
+  if (!lastPackId) return;
+  opening = false;
+  openPack(lastPackId.pack, lastPackId.count);
+};
+$('#closeRevealBtn').onclick = () => {
+  $('#revealOverlay').hidden = true;
+  opening = false;
+};
+
+// ---------- 卡库 ----------
+function renderInventory() {
+  const grid = $('#invGrid');
+  grid.innerHTML = '';
+  const inv = state.inventory;
+  $('#invCount').textContent = inv.length;
+  $('#invEmpty').style.display = inv.length ? 'none' : 'block';
+
+  const owned = inv.filter(i => i.status === 'owned');
+  const totalValue = owned.reduce((s, i) => s + i.value, 0);
+  $('#invSummary').innerHTML =
+    `持有 ${owned.length} 张 ｜ 总标价 <b>◉ ${fmt(totalValue)}</b> ｜ 全部回收可得 ◉ ${fmt(Math.floor(totalValue * state.buybackRate))}`;
+
+  for (const item of inv) {
+    const wrap = document.createElement('div');
+    wrap.className = 'inv-item';
+    wrap.appendChild(cardEl(item));
+    if (item.status === 'shipped') {
+      const tag = document.createElement('div');
+      tag.className = 'shipped-tag';
+      tag.textContent = '📦 已申请发货';
+      wrap.appendChild(tag);
+    } else {
+      const actions = document.createElement('div');
+      actions.className = 'inv-actions';
+      const sellBtn = document.createElement('button');
+      sellBtn.className = 'btn btn-dim';
+      sellBtn.textContent = `回收 ◉${fmt(Math.floor(item.value * state.buybackRate))}`;
+      sellBtn.onclick = async () => {
+        try {
+          const r = await api('/api/sell', { uid: item.uid });
+          setBalance(r.balance);
+          toast(`回收成功 +◉ ${fmt(r.credit)}`);
+          refreshStateSoft();
+        } catch (e) { toast(e.message); }
+      };
+      const shipBtn = document.createElement('button');
+      shipBtn.className = 'btn btn-dim';
+      shipBtn.textContent = '发货';
+      shipBtn.onclick = async () => {
+        try {
+          await api('/api/ship', { uid: item.uid });
+          toast('已登记发货（演示环境不会真的寄出 🙂）');
+          refreshStateSoft();
+        } catch (e) { toast(e.message); }
+      };
+      actions.append(sellBtn, shipBtn);
+      wrap.appendChild(actions);
+    }
+    grid.appendChild(wrap);
+  }
+}
+
+$('#sellFloorBtn').onclick = async () => {
+  try {
+    const r = await api('/api/sell-floor', {});
+    setBalance(r.balance);
+    toast(`已回收 ${r.count} 张低档卡 +◉ ${fmt(r.credit)}`);
+    refreshStateSoft();
+  } catch (e) { toast(e.message); }
+};
+
+// ---------- 记录 & 走马灯 ----------
+function renderHistory() {
+  const body = $('#historyBody');
+  body.innerHTML = '';
+  $('#histEmpty').style.display = state.history.length ? 'none' : 'block';
+  for (const h of state.history) {
+    const tr = document.createElement('tr');
+    const t = new Date(h.at);
+    tr.innerHTML = `
+      <td>${t.toLocaleTimeString('zh-CN')}</td>
+      <td>${h.packName}</td>
+      <td><span class="tier-dot" style="background:${TIER_COLOR[h.tier]}"></span>${h.name}</td>
+      <td>${h.grade || '原卡'}</td>
+      <td class="odds-num">◉ ${fmt(h.value)}</td>
+      <td><code>#${h.proof.nonce} / ${h.proof.roll}</code></td>`;
+    body.appendChild(tr);
+  }
+}
+
+function renderTicker() {
+  const hits = state.history.filter(h => ['epic', 'legendary', 'grail'].includes(h.tier)).slice(0, 12);
+  const ticker = $('#ticker');
+  if (!hits.length) { ticker.hidden = true; return; }
+  ticker.hidden = false;
+  $('#tickerInner').innerHTML = hits
+    .map(h => `<span class="ticker-item">🎊 恭喜抽中 <b>${h.name} ${h.grade || ''}</b>（◉ ${fmt(h.value)}）</span>`)
+    .join('');
+}
+
+// ---------- 公平性 ----------
+function renderFairness() {
+  const f = state.fairness;
+  $('#fairHash').textContent = f.serverSeedHash;
+  $('#fairNonce').textContent = f.nonce;
+  const input = $('#clientSeedInput');
+  if (document.activeElement !== input) input.value = f.clientSeed;
+  const list = $('#revealedList');
+  list.innerHTML = f.revealedSeeds.length ? '' : '<div class="revealed-item">还没有公开过的种子。轮换一次即可公开当前种子。</div>';
+  for (const r of [...f.revealedSeeds].reverse()) {
+    const div = document.createElement('div');
+    div.className = 'revealed-item';
+    div.innerHTML =
+      `serverSeed: <code>${r.serverSeed}</code><br>` +
+      `sha256: ${r.serverSeedHash}<br>` +
+      `clientSeed: ${r.clientSeed} ｜ 覆盖 nonce 0–${Math.max(r.lastNonce, 0)}`;
+    list.appendChild(div);
+  }
+}
+
+$('#setSeedBtn').onclick = async () => {
+  try {
+    await api('/api/client-seed', { clientSeed: $('#clientSeedInput').value });
+    toast('客户端种子已更新');
+    refreshStateSoft();
+  } catch (e) { toast(e.message); }
+};
+
+$('#rotateBtn').onclick = async () => {
+  try {
+    await api('/api/rotate-seed', {});
+    toast('种子已轮换，旧种子已公开可复验');
+    refreshStateSoft();
+  } catch (e) { toast(e.message); }
+};
+
+$('#verifyBtn').onclick = async () => {
+  const out = $('#verifyOut');
+  try {
+    const q = new URLSearchParams({
+      serverSeed: $('#vSeed').value.trim(),
+      clientSeed: $('#vClient').value.trim(),
+      nonce: $('#vNonce').value.trim() || '0'
+    });
+    const r = await api(`/api/verify?${q}`);
+    out.hidden = false;
+    out.textContent = `sha256(serverSeed) = ${r.serverSeedHash}\nroll = ${r.roll}\n\n对照「开奖记录」里同一 nonce 的 roll，一致即证明未被操纵。`;
+  } catch (e) {
+    out.hidden = false;
+    out.textContent = '验证失败：' + e.message;
+  }
+};
+
+// ---------- 顶栏 & 标签页 & 主题 ----------
+$('#topupBtn').onclick = async () => {
+  const r = await api('/api/topup', {});
+  setBalance(r.balance);
+  toast(`充值成功 +◉ ${fmt(r.added)}（演示币，不花真钱）`);
+};
+
+$('#loginBtn').onclick = () => toast('演示环境，无需登录 🙂');
+
+// 主题切换
+function applyThemeButtons() {
+  const cur = document.documentElement.dataset.theme || 'dark';
+  document.querySelectorAll('[data-theme-set]').forEach(b => {
+    b.classList.toggle('on', b.dataset.themeSet === cur);
+  });
+}
+document.querySelectorAll('[data-theme-set]').forEach(b => {
+  b.onclick = () => {
+    document.documentElement.dataset.theme = b.dataset.themeSet;
+    try { localStorage.setItem('zero-theme', b.dataset.themeSet); } catch (e) { /* 忽略 */ }
+    applyThemeButtons();
+  };
+});
+applyThemeButtons();
+
+// 免费礼包（一次性）
+const freePackBtn = $('#freePack');
+try {
+  if (!localStorage.getItem('zero-freepack')) freePackBtn.hidden = false;
+} catch (e) { freePackBtn.hidden = false; }
+freePackBtn.onclick = async () => {
+  const r = await api('/api/topup', { amount: 200 });
+  setBalance(r.balance);
+  try { localStorage.setItem('zero-freepack', '1'); } catch (e) { /* 忽略 */ }
+  freePackBtn.hidden = true;
+  toast('🎁 新人免费礼包 +◉ 200，够开一个新手包！');
+};
+
+document.querySelectorAll('.tab').forEach(btn => {
+  btn.onclick = () => {
+    document.querySelectorAll('.tab').forEach(b => b.classList.remove('active'));
+    document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+    btn.classList.add('active');
+    $(`#tab-${btn.dataset.tab}`).classList.add('active');
+  };
+});
+
+document.querySelectorAll('[data-close-odds]').forEach(el => {
+  el.onclick = () => { $('#oddsOverlay').hidden = true; };
+});
+
+// ---------- 初始化 ----------
+async function refreshStateSoft() {
+  state = await api('/api/state');
+  $('#balanceNum').textContent = fmt(state.balance);
+  renderInventory();
+  renderHistory();
+  renderTicker();
+  renderFairness();
+}
+
+async function init() {
+  [packs, state] = await Promise.all([api('/api/packs'), api('/api/state')]);
+  $('#balanceNum').textContent = fmt(state.balance);
+  renderShop();
+  renderInventory();
+  renderHistory();
+  renderTicker();
+  renderFairness();
+}
+
+init().catch(e => toast('初始化失败：' + e.message));
+
+</script>
+</body>
+</html>
