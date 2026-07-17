@@ -92,6 +92,113 @@ function cardEl(item, delay = 0) {
   return div;
 }
 
+// ---------- ZERO 锡箔卡包 ----------
+const BLADE_SVG = `
+<svg width="76" height="62" viewBox="0 0 76 62" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="bladeGrad" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#eef2f8"/>
+      <stop offset=".55" stop-color="#aeb9cc"/>
+      <stop offset="1" stop-color="#7e8aa0"/>
+    </linearGradient>
+  </defs>
+  <polygon points="8,56 40,56 40,38 22,38" fill="url(#bladeGrad)" stroke="#5d6880" stroke-width="1"/>
+  <line x1="13" y1="52.5" x2="36" y2="52.5" stroke="#ffffff" stroke-opacity=".55" stroke-width="1.5"/>
+  <rect x="36" y="30" width="36" height="20" rx="5" fill="#39476b" stroke="#5d6f9e" stroke-width="1.5"/>
+  <rect x="43" y="35" width="17" height="10" rx="3" fill="#232c48"/>
+  <circle cx="66" cy="40" r="2" fill="#8fa2cf"/>
+</svg>`;
+
+function foilPackEl(pack, { mini = false, interactive = false } = {}) {
+  const el = document.createElement('div');
+  el.className = 'foilpack' + (mini ? ' mini' : '');
+  el.style.setProperty('--pc', THEME_COLOR[pack.theme] || '#f5c542');
+  el.innerHTML = `
+    <div class="fp-cardout"><div class="fp-cardback">Z</div></div>
+    <div class="fp-body">
+      <div class="fp-logo">ZERO</div>
+      <div class="fp-series">${pack.name}</div>
+      <div class="fp-sub">${pack.nameEn.toUpperCase()} · TCG MYSTERY PACK</div>
+      <div class="fp-badge">◉ ${fmt(pack.price)} / 抽</div>
+      <div class="fp-sheen"></div>
+      <div class="fp-crimp fp-crimp-bottom"></div>
+    </div>
+    <div class="fp-strip">
+      <div class="fp-crimp"></div>
+      <div class="fp-foil"></div>
+    </div>
+    ${interactive ? `
+    <div class="fp-guide"></div>
+    <div class="fp-slit"></div>
+    <div class="fp-blade">${BLADE_SVG}</div>
+    <div class="fp-cutzone"></div>` : ''}`;
+  return el;
+}
+
+// 刀切交互：progress 单调递增，划满即触发 onDone（只触发一次）
+function setupCutter(packEl, onDone) {
+  const blade = packEl.querySelector('.fp-blade');
+  const slit = packEl.querySelector('.fp-slit');
+  const zone = packEl.querySelector('.fp-cutzone');
+  const INSET = 10;
+  let progress = 0, dragging = false, done = false;
+
+  function apply() {
+    const w = packEl.clientWidth - INSET * 2;
+    slit.style.width = `${progress * w}px`;
+    blade.style.left = `${INSET + progress * w}px`;
+  }
+  function finish() {
+    done = true;
+    dragging = false;
+    zone.style.pointerEvents = 'none';
+    blade.classList.remove('active');
+    packEl.classList.add('cutdone');
+    onDone();
+  }
+  function advance(p) {
+    if (done) return;
+    // 只允许向前推进，且单次事件最多前进 20%，防止直接点右端瞬开
+    if (p > progress) progress = Math.min(p, progress + 0.2);
+    apply();
+    if (progress >= 0.99) finish();
+  }
+
+  zone.addEventListener('pointerdown', (e) => {
+    if (done) return;
+    dragging = true;
+    blade.classList.add('active');
+    zone.setPointerCapture(e.pointerId);
+  });
+  zone.addEventListener('pointermove', (e) => {
+    if (!dragging || done) return;
+    const r = packEl.getBoundingClientRect();
+    advance((e.clientX - r.left - INSET) / (r.width - INSET * 2));
+  });
+  const stop = () => { dragging = false; blade.classList.remove('active'); };
+  zone.addEventListener('pointerup', stop);
+  zone.addEventListener('pointercancel', stop);
+  apply();
+
+  return {
+    autoCut() {
+      if (done) return;
+      const start = progress;
+      const t0 = performance.now();
+      const tick = (t) => {
+        if (done) return;
+        const k = Math.min(1, (t - t0) / 550);
+        progress = start + (1 - start) * k;
+        apply();
+        if (progress >= 0.99) { finish(); return; }
+        requestAnimationFrame(tick);
+      };
+      requestAnimationFrame(tick);
+    },
+    get done() { return done; }
+  };
+}
+
 // ---------- 卡包商店 ----------
 function renderPacks() {
   const grid = $('#packGrid');
@@ -103,7 +210,7 @@ function renderPacks() {
     el.className = 'pack-card';
     el.style.setProperty('--pack-color', color);
     el.innerHTML = `
-      <div class="pack-art">${pack.nameEn.split(' ').map(w => w[0]).join('')}</div>
+      <div class="pack-art"></div>
       <div class="pack-title"><h2>${pack.name}</h2><span class="en">${pack.nameEn}</span></div>
       <div class="pack-desc">${pack.desc}</div>
       <div class="pack-jackpot">🏆 头奖：${jackpot.name} ${jackpot.grade || ''} · ◉ ${fmt(jackpot.value)}（${oddsText(jackpot.odds)}）</div>
@@ -113,6 +220,7 @@ function renderPacks() {
         <button class="btn btn-dim open10">开 10 次</button>
         <button class="btn btn-gold open1">开 1 次</button>
       </div>`;
+    el.querySelector('.pack-art').appendChild(foilPackEl(pack, { mini: true }));
     el.querySelector('.odds-link').onclick = () => showOdds(pack);
     el.querySelector('.open1').onclick = () => openPack(pack, 1);
     el.querySelector('.open10').onclick = () => openPack(pack, 10);
@@ -138,7 +246,7 @@ function showOdds(pack) {
   $('#oddsOverlay').hidden = false;
 }
 
-// ---------- 开包 ----------
+// ---------- 开包：刀切锡箔卡包 ----------
 let opening = false;
 async function openPack(pack, count) {
   if (opening) return;
@@ -151,62 +259,79 @@ async function openPack(pack, count) {
   lastPackId = { pack, count };
 
   const overlay = $('#revealOverlay');
-  const packAnim = $('#packAnim');
-  const packVisual = $('#packVisual');
+  const stage = $('#cutStage');
+  const holder = $('#packHolder');
   const revealArea = $('#revealArea');
   const actions = $('#revealActions');
-  const bg = $('#overlayBg');
 
   overlay.hidden = false;
-  bg.classList.remove('bigwin');
+  $('#overlayBg').classList.remove('bigwin');
   revealArea.hidden = true;
   revealArea.innerHTML = '';
   actions.hidden = true;
-  packAnim.hidden = false;
-  packAnim.classList.remove('tearing');
-  packVisual.style.setProperty('--pack-color', THEME_COLOR[pack.theme] || '#f5c542');
-  packVisual.textContent = pack.nameEn.split(' ').map(w => w[0]).join('');
-  packVisual.style.animation = 'none';
-  void packVisual.offsetWidth;
-  packVisual.style.animation = '';
+  stage.hidden = false;
+  stage.classList.remove('done');
+  holder.innerHTML = '';
+  $('#cutHint').textContent = count === 10
+    ? '🔪 按住刀片，从左向右划开卡包 · 十连'
+    : '🔪 按住刀片，从左向右划开卡包';
+  $('#cancelCutBtn').hidden = false;
 
-  let data;
-  try {
-    data = await api('/api/open', { packId: pack.id, count });
-  } catch (e) {
+  const packEl = foilPackEl(pack, { interactive: true });
+  holder.appendChild(packEl);
+
+  const cutter = setupCutter(packEl, async () => {
+    // 划满的瞬间才真正下注开包
+    $('#cancelCutBtn').hidden = true;
+    let data;
+    try {
+      data = await api('/api/open', { packId: pack.id, count });
+    } catch (e) {
+      overlay.hidden = true;
+      opening = false;
+      toast(e.message);
+      return;
+    }
+    setBalance(data.balance);
+
+    // 顶条掉落 → 卡从包里滑出 → 舞台淡出 → 翻牌
+    setTimeout(() => packEl.classList.add('opened'), 420);
+    setTimeout(() => stage.classList.add('done'), 1400);
+    setTimeout(() => {
+      stage.hidden = true;
+      showResults(pack, count, data);
+    }, 1700);
+  });
+
+  $('#autoCutBtn').onclick = () => cutter.autoCut();
+  $('#cancelCutBtn').onclick = () => {
+    if (cutter.done) return; // 已下注就不能反悔了
     overlay.hidden = true;
     opening = false;
-    toast(e.message);
-    return;
+  };
+}
+
+function showResults(pack, count, data) {
+  const revealArea = $('#revealArea');
+  revealArea.hidden = false;
+
+  const best = data.items.reduce((a, b) => (b.value > a.value ? b : a));
+  const isBigWin = best.tier === 'legendary' || best.tier === 'grail';
+  if (isBigWin) {
+    $('#overlayBg').classList.add('bigwin');
+    const banner = document.createElement('div');
+    banner.className = 'bigwin-banner';
+    banner.style.flexBasis = '100%';
+    banner.textContent = best.tier === 'grail' ? '🎉 圣 杯 降 临 ！' : '✨ 传 说 大 奖 ！';
+    revealArea.appendChild(banner);
   }
-  setBalance(data.balance);
+  data.items.forEach((item, i) => revealArea.appendChild(cardEl(item, i * 140)));
 
-  // 摇晃 → 撕开 → 翻牌
-  setTimeout(() => {
-    packAnim.classList.add('tearing');
-    setTimeout(() => {
-      packAnim.hidden = true;
-      revealArea.hidden = false;
-
-      const best = data.items.reduce((a, b) => (b.value > a.value ? b : a));
-      const isBigWin = best.tier === 'legendary' || best.tier === 'grail';
-      if (isBigWin) {
-        bg.classList.add('bigwin');
-        const banner = document.createElement('div');
-        banner.className = 'bigwin-banner';
-        banner.style.flexBasis = '100%';
-        banner.textContent = best.tier === 'grail' ? '🎉 圣 杯 降 临 ！' : '✨ 传 说 大 奖 ！';
-        revealArea.appendChild(banner);
-      }
-      data.items.forEach((item, i) => revealArea.appendChild(cardEl(item, i * 140)));
-
-      const total = data.items.reduce((s, i) => s + i.value, 0);
-      $('#revealTotal').innerHTML =
-        `本次花费 ◉ ${fmt(pack.price * count)} ｜ 抽中总价值 <b>◉ ${fmt(total)}</b>`;
-      actions.hidden = false;
-      refreshStateSoft();
-    }, 430);
-  }, 950);
+  const total = data.items.reduce((s, i) => s + i.value, 0);
+  $('#revealTotal').innerHTML =
+    `本次花费 ◉ ${fmt(pack.price * count)} ｜ 抽中总价值 <b>◉ ${fmt(total)}</b>`;
+  $('#revealActions').hidden = false;
+  refreshStateSoft();
 }
 
 $('#againBtn').onclick = () => {

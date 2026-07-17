@@ -92,7 +92,14 @@
   <div class="overlay" id="revealOverlay" hidden>
     <div class="overlay-bg" id="overlayBg"></div>
     <div class="overlay-content">
-      <div class="pack-anim" id="packAnim"><div class="pack-visual" id="packVisual"></div></div>
+      <div class="cut-stage" id="cutStage" hidden>
+        <div class="pack-holder" id="packHolder"></div>
+        <div class="cut-hint" id="cutHint">🔪 按住刀片，从左向右划开卡包</div>
+        <div class="cut-tools">
+          <button class="btn btn-dim" id="autoCutBtn">快速开包</button>
+          <button class="btn btn-dim" id="cancelCutBtn">取消</button>
+        </div>
+      </div>
       <div class="reveal-area" id="revealArea" hidden></div>
       <div class="reveal-actions" id="revealActions" hidden>
         <div class="reveal-total" id="revealTotal"></div>
